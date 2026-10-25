@@ -1,0 +1,29 @@
+{
+  "id": "dsh-external/dsh-codex-runner",
+  "version": "0.5.0-rc.2",
+  "main": "./lib/index.js",
+  "description": "Codex task orchestration with complete final answers, active-turn steering, optional quota reminders and recovery, workspace-scoped conversation reading, experimental rule-based model selection and native settings.",
+  "engines": {
+    "dsh": ">=0.2.0-rc.2 <0.3.0"
+  },
+  "contributes": {
+    "tools": [
+      "codex_run",
+      "codex_status",
+      "codex_config",
+      "codex_say",
+      "codex_cancel",
+      "codex_list",
+      "codex_doctor",
+      "codex_quota_resume",
+      "codex_sessions",
+      "codex_read",
+      "codex_release",
+      "codex_models",
+      "codex_selection",
+      "codex_quota",
+      "codex_diagnose"
+    ],
+    "skills": []
+  }
+}

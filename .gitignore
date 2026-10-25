@@ -1,0 +1,34 @@
+# Only the installable plugin and its user-facing README/license are tracked.
+/*
+!/.gitignore
+!/.gitattributes
+!/README.md
+!/LICENSE
+!/package.json
+!/dsh.plugin.json
+!/cordis.patch.yml
+!/lib/
+!/drivers/
+
+node_modules/
+.codex-runner/
+*.tgz
+*.log
+*.tmp
+.env
+.env.*
+!.env.example
+coverage/
+test-results/
+
+# Historical working notes, one-off scripts and obsolete test output.
+/tasks/
+# Unimplemented upstream proposal; not part of this plugin version.
+/docs/upstream-settings-row.md
+
+*.jsonl
+*.bak
+*.orig
+*.rej
+.DS_Store
+Thumbs.db

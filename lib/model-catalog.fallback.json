@@ -1,0 +1,189 @@
+{
+  "version": 1,
+  "models": [
+    {
+      "id": "gpt-6-luna",
+      "model": "gpt-6-luna",
+      "displayName": "gpt-6-luna",
+      "description": "",
+      "hidden": false,
+      "isDefault": false,
+      "defaultReasoningEffort": "high",
+      "efforts": [
+        {
+          "id": "low",
+          "description": ""
+        },
+        {
+          "id": "medium",
+          "description": ""
+        },
+        {
+          "id": "high",
+          "description": ""
+        },
+        {
+          "id": "xhigh",
+          "description": ""
+        },
+        {
+          "id": "max",
+          "description": ""
+        }
+      ],
+      "serviceTiers": [
+        {
+          "id": "priority",
+          "name": "priority",
+          "description": ""
+        },
+        {
+          "id": "flex",
+          "name": "flex",
+          "description": ""
+        }
+      ]
+    },
+    {
+      "id": "gpt-6-sol",
+      "model": "gpt-6-sol",
+      "displayName": "gpt-6-sol",
+      "description": "",
+      "hidden": false,
+      "isDefault": false,
+      "defaultReasoningEffort": "high",
+      "efforts": [
+        {
+          "id": "low",
+          "description": ""
+        },
+        {
+          "id": "medium",
+          "description": ""
+        },
+        {
+          "id": "high",
+          "description": ""
+        },
+        {
+          "id": "xhigh",
+          "description": ""
+        },
+        {
+          "id": "max",
+          "description": ""
+        },
+        {
+          "id": "ultra",
+          "description": ""
+        }
+      ],
+      "serviceTiers": [
+        {
+          "id": "priority",
+          "name": "priority",
+          "description": ""
+        },
+        {
+          "id": "flex",
+          "name": "flex",
+          "description": ""
+        }
+      ]
+    },
+    {
+      "id": "gpt-6.1-sol",
+      "model": "gpt-6.1-sol",
+      "displayName": "gpt-6.1-sol",
+      "description": "",
+      "hidden": false,
+      "isDefault": true,
+      "defaultReasoningEffort": "high",
+      "efforts": [
+        {
+          "id": "low",
+          "description": ""
+        },
+        {
+          "id": "medium",
+          "description": ""
+        },
+        {
+          "id": "high",
+          "description": ""
+        },
+        {
+          "id": "xhigh",
+          "description": ""
+        },
+        {
+          "id": "max",
+          "description": ""
+        },
+        {
+          "id": "ultra",
+          "description": ""
+        }
+      ],
+      "serviceTiers": [
+        {
+          "id": "priority",
+          "name": "priority",
+          "description": ""
+        },
+        {
+          "id": "flex",
+          "name": "flex",
+          "description": ""
+        }
+      ]
+    },
+    {
+      "id": "gpt-6-astra",
+      "model": "gpt-6-astra",
+      "displayName": "gpt-6-astra",
+      "description": "",
+      "hidden": false,
+      "isDefault": false,
+      "defaultReasoningEffort": "high",
+      "efforts": [
+        {
+          "id": "low",
+          "description": ""
+        },
+        {
+          "id": "medium",
+          "description": ""
+        },
+        {
+          "id": "high",
+          "description": ""
+        },
+        {
+          "id": "xhigh",
+          "description": ""
+        },
+        {
+          "id": "max",
+          "description": ""
+        },
+        {
+          "id": "ultra",
+          "description": ""
+        }
+      ],
+      "serviceTiers": [
+        {
+          "id": "priority",
+          "name": "priority",
+          "description": ""
+        },
+        {
+          "id": "flex",
+          "name": "flex",
+          "description": ""
+        }
+      ]
+    }
+  ]
+}

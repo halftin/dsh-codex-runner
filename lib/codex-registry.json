@@ -1,0 +1,534 @@
+{
+  "version": 1,
+  "codexVersion": null,
+  "updatedAt": null,
+  "fields": {
+    "model_reasoning_summary": {
+      "allow": true,
+      "fallbackSchema": {
+        "type": "string",
+        "enum": [
+          "none",
+          "auto",
+          "concise",
+          "detailed"
+        ]
+      }
+    },
+    "model_verbosity": {
+      "allow": true,
+      "fallbackSchema": {
+        "type": "string",
+        "enum": [
+          "low",
+          "medium",
+          "high"
+        ]
+      }
+    },
+    "web_search": {
+      "allow": true,
+      "fallbackSchema": {
+        "type": "string",
+        "enum": [
+          "disabled",
+          "cached",
+          "live"
+        ]
+      }
+    },
+    "model_context_window": {
+      "allow": true,
+      "fallbackSchema": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 2147483647
+      }
+    },
+    "model_auto_compact_token_limit": {
+      "allow": true,
+      "fallbackSchema": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 2147483647
+      }
+    },
+    "agents.interrupt_message": {
+      "allow": true,
+      "fallbackSchema": {
+        "type": "boolean"
+      },
+      "profile": true,
+      "name": "Record native interruption messages",
+      "description": "Record a model-visible message when an agent turn is interrupted. Unset inherits Codex configuration; the Codex default is true."
+    },
+    "features.memories": {
+      "allow": true,
+      "fallbackSchema": {
+        "type": "boolean"
+      }
+    },
+    "features.apps": {
+      "allow": true,
+      "fallbackSchema": {
+        "type": "boolean"
+      }
+    },
+    "features.browser_use": {
+      "allow": true,
+      "fallbackSchema": {
+        "type": "boolean"
+      }
+    },
+    "features.computer_use": {
+      "allow": true,
+      "fallbackSchema": {
+        "type": "boolean"
+      }
+    },
+    "analytics.enabled": {
+      "allow": true,
+      "fallbackSchema": {
+        "type": "boolean"
+      }
+    },
+    "check_for_update_on_startup": {
+      "allow": true,
+      "fallbackSchema": {
+        "type": "boolean"
+      }
+    },
+    "log_dir": {
+      "allow": true,
+      "fallbackSchema": {
+        "type": "string"
+      }
+    },
+    "sqlite_home": {
+      "allow": true,
+      "fallbackSchema": {
+        "type": "string"
+      }
+    },
+    "model": {
+      "used": true,
+      "allow": false
+    },
+    "model_reasoning_effort": {
+      "used": true,
+      "allow": false
+    },
+    "service_tier": {
+      "used": true,
+      "allow": false
+    },
+    "sandbox_mode": {
+      "used": true,
+      "allow": false,
+      "fallbackSchema": {
+        "type": "string",
+        "enum": [
+          "workspace-write",
+          "read-only",
+          "danger-full-access"
+        ]
+      }
+    },
+    "sandbox_workspace_write": {
+      "used": true,
+      "allow": false
+    },
+    "sandbox_workspace_write.network_access": {
+      "used": true,
+      "allow": false,
+      "fallbackSchema": {
+        "type": "boolean",
+        "default": false
+      }
+    },
+    "approval_policy": {
+      "used": true,
+      "allow": false,
+      "fallbackSchema": {
+        "type": "string",
+        "enum": [
+          "never",
+          "on-request"
+        ]
+      },
+      "excludedValues": [
+        "untrusted",
+        "on-failure"
+      ]
+    }
+  },
+  "translations": {
+    "version": 1,
+    "locale": "zh-CN",
+    "models": {
+      "gpt-6-luna": {
+        "description": "机械任务与轻量工作"
+      },
+      "gpt-6-sol": {
+        "description": "编码与日常工作"
+      },
+      "gpt-6.1-sol": {
+        "description": "编码与日常工作的主力模型"
+      },
+      "gpt-6-astra": {
+        "description": "复杂任务与深入推理"
+      }
+    },
+    "efforts": {
+      "low": {
+        "description": "较轻推理"
+      },
+      "medium": {
+        "description": "中等推理"
+      },
+      "high": {
+        "description": "较深入推理"
+      },
+      "xhigh": {
+        "description": "进一步推理"
+      },
+      "max": {
+        "description": "最高推理档"
+      },
+      "ultra": {
+        "description": "极高推理档"
+      }
+    },
+    "tiers": {
+      "priority": {
+        "name": "Fast",
+        "description": "优先服务档，具体用量以 Codex 为准"
+      },
+      "flex": {
+        "name": "Flex",
+        "description": "灵活服务档，具体可用性以目录为准"
+      }
+    },
+    "settings": {
+      "model_reasoning_summary": {
+        "name": "推理摘要",
+        "description": "控制 Codex 提供的推理摘要：none 不提供，auto 自动，concise 简洁，detailed 详细。仅对支持此参数的模型生效；不是完整的内部思考过程。"
+      },
+      "model_verbosity": {
+        "name": "回答详细程度",
+        "description": "控制支持此参数的模型的回答篇幅：low 简短，medium 适中，high 详细。可能影响输出 token 数量，不改变推理强度。"
+      },
+      "web_search": {
+        "name": "网页搜索方式",
+        "description": "控制网页搜索：disabled 禁用，cached 使用缓存结果，live 实时检索。实际可用选项以当前 Codex 版本和注册表范围为准。"
+      },
+      "model_context_window": {
+        "name": "模型上下文窗口",
+        "description": "以 token 为单位声明模型的上下文容量，供 Codex 管理上下文使用；填写此值不会增加模型实际支持的容量。留空继承 Codex 配置。"
+      },
+      "model_auto_compact_token_limit": {
+        "name": "自动压缩上下文阈值",
+        "description": "上下文达到指定 token 数量时触发 Codex 自动压缩。压缩由 Codex 处理，可能产生模型 token 消耗；留空使用 Codex 的默认策略。"
+      },
+      "agents.interrupt_message": {
+        "name": "记录原生中断消息",
+        "description": "agent 回合被中断时，记录一条模型可见的消息；未配置时继承 Codex 配置，Codex 默认开启。"
+      },
+      "features.memories": {
+        "name": "原生记忆功能",
+        "description": "控制 Codex 的 memories 功能开关。具体行为及可用性由安装的 Codex 版本决定；插件仅传递配置，不另外调用模型生成记忆。"
+      },
+      "features.apps": {
+        "name": "原生应用连接功能",
+        "description": "控制 Codex 的 apps 功能开关。具体行为、可用连接及权限由 Codex 管理；插件仅传递配置。"
+      },
+      "features.browser_use": {
+        "name": "原生浏览器操作功能",
+        "description": "控制 Codex 的 browser_use 功能开关。实际支持情况及浏览器操作权限由安装的 Codex 版本决定；插件仅传递配置。"
+      },
+      "features.computer_use": {
+        "name": "原生计算机操作功能",
+        "description": "控制 Codex 的 computer_use 功能开关。实际支持情况及计算机操作权限由安装的 Codex 版本决定；插件仅传递配置。"
+      },
+      "analytics.enabled": {
+        "name": "OpenAI 使用情况分析",
+        "description": "设为 false 可关闭向 OpenAI 发送使用情况分析。不会关闭用户自行配置的 OTLP 指标导出；如需关闭后者，应另行配置 otel.metrics_exporter。"
+      },
+      "check_for_update_on_startup": {
+        "name": "启动时检查更新",
+        "description": "控制 Codex 启动时是否检查并提示更新，Codex 默认开启。若更新由组织统一管理，可关闭检查。"
+      },
+      "log_dir": {
+        "name": "Codex 日志目录",
+        "description": "指定 Codex 日志目录。显式设置还会将 SQLite 日志写入此目录并启用终端文本日志；留空时文本日志使用 $CODEX_HOME/log，SQLite 日志使用 sqlite_home。已有数据库不会自动迁移；受管理的 sqlite_home 要求优先。"
+      },
+      "sqlite_home": {
+        "name": "Codex 状态数据库目录",
+        "description": "指定 Codex SQLite 状态数据库的存放目录。未设置时，优先使用 CODEX_SQLITE_HOME 环境变量，否则使用 CODEX_HOME。与插件的项目运行记录目录相互独立。"
+      },
+      "model": {
+        "name": "运行模型",
+        "description": "指定 Codex 使用的模型标识。插件通过默认模型或单次任务参数管理此值，不开放通用配置覆盖；可选模型以当前目录为准。"
+      },
+      "model_reasoning_effort": {
+        "name": "模型推理强度",
+        "description": "指定模型使用的推理强度，必须是当前模型支持的档位。插件通过默认推理强度或单次任务参数管理；更高强度可能消耗更多模型 token。"
+      },
+      "service_tier": {
+        "name": "服务档位",
+        "description": "指定 Codex 请求的服务档位，例如 priority 或 flex。插件通过服务档位设置映射传递；实际可用性、用量与计费以 Codex 为准。"
+      },
+      "sandbox_mode": {
+        "name": "沙箱模式",
+        "description": "控制运行权限：read-only 只读，workspace-write 允许写入工作区，danger-full-access 完整访问。由插件的沙箱设置管理，不开放通用配置覆盖。"
+      },
+      "sandbox_workspace_write": {
+        "name": "工作区写入沙箱配置",
+        "description": "workspace-write 模式的沙箱配置对象，包括额外可写目录、网络访问和临时目录处理规则。插件通过专用权限逻辑管理，不开放整个对象的通用覆盖。"
+      },
+      "sandbox_workspace_write.network_access": {
+        "name": "沙箱内网络",
+        "description": "控制 workspace-write 沙箱能否访问网络。true 允许，false 禁止；其他沙箱模式遵循各自权限。由插件的沙箱内网络开关管理。"
+      },
+      "approval_policy": {
+        "name": "命令审批策略",
+        "description": "控制 Codex 何时请求命令审批：never 不请求，on-request 由模型按需请求。由插件的审批设置管理；当前插件不提供已弃用的 untrusted 和 on-failure 选项。"
+      }
+    },
+    "meta": {
+      "source": "default"
+    }
+  },
+  "definitions": {
+    "model_reasoning_summary": {
+      "key": "model_reasoning_summary",
+      "name": "model_reasoning_summary",
+      "description": "A summary of the reasoning performed by the model. This can be useful for debugging and understanding the model's reasoning process. See https://platform.openai.com/docs/guides/reasoning?api-mode=responses#reasoning-summaries",
+      "schema": {
+        "type": "string",
+        "enum": [
+          "none",
+          "auto",
+          "concise",
+          "detailed"
+        ]
+      }
+    },
+    "model_verbosity": {
+      "key": "model_verbosity",
+      "name": "model_verbosity",
+      "description": "Optional verbosity control for GPT-5 models (Responses API `text.verbosity`).",
+      "schema": {
+        "type": "string",
+        "enum": [
+          "low",
+          "medium",
+          "high"
+        ]
+      }
+    },
+    "web_search": {
+      "key": "web_search",
+      "name": "web_search",
+      "description": "Controls the web search tool mode: disabled, cached, indexed, or live.",
+      "schema": {
+        "type": "string",
+        "enum": [
+          "disabled",
+          "cached",
+          "live"
+        ]
+      }
+    },
+    "model_context_window": {
+      "key": "model_context_window",
+      "name": "model_context_window",
+      "description": "Size of the context window for the model, in tokens.",
+      "schema": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 2147483647
+      }
+    },
+    "model_auto_compact_token_limit": {
+      "key": "model_auto_compact_token_limit",
+      "name": "model_auto_compact_token_limit",
+      "description": "Token usage threshold triggering auto-compaction of conversation history.",
+      "schema": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 2147483647
+      }
+    },
+    "agents.interrupt_message": {
+      "key": "agents.interrupt_message",
+      "name": "Record native interruption messages",
+      "description": "Record a model-visible message when an agent turn is interrupted. Unset inherits Codex configuration; the Codex default is true.",
+      "schema": {
+        "type": "boolean"
+      }
+    },
+    "features.memories": {
+      "key": "features.memories",
+      "name": "features.memories",
+      "description": "Controls the native memories feature flag. Behavior and availability depend on the installed Codex version.",
+      "schema": {
+        "type": "boolean"
+      }
+    },
+    "features.apps": {
+      "key": "features.apps",
+      "name": "features.apps",
+      "description": "Controls the native apps feature flag. Behavior and availability depend on the installed Codex version.",
+      "schema": {
+        "type": "boolean"
+      }
+    },
+    "features.browser_use": {
+      "key": "features.browser_use",
+      "name": "features.browser_use",
+      "description": "Controls the native browser_use feature flag. Behavior and availability depend on the installed Codex version.",
+      "schema": {
+        "type": "boolean"
+      }
+    },
+    "features.computer_use": {
+      "key": "features.computer_use",
+      "name": "features.computer_use",
+      "description": "Controls the native computer_use feature flag. Behavior and availability depend on the installed Codex version.",
+      "schema": {
+        "type": "boolean"
+      }
+    },
+    "analytics.enabled": {
+      "key": "analytics.enabled",
+      "name": "analytics.enabled",
+      "description": "When `false`, disables OpenAI analytics across Codex product surfaces in this profile. Custom OTLP metrics exporters remain enabled; set `otel.metrics_exporter = \"none\"` to disable them.",
+      "schema": {
+        "type": "boolean"
+      }
+    },
+    "check_for_update_on_startup": {
+      "key": "check_for_update_on_startup",
+      "name": "check_for_update_on_startup",
+      "description": "When `true`, checks for Codex updates on startup and surfaces update prompts. Set to `false` only if your Codex updates are centrally managed. Defaults to `true`.",
+      "schema": {
+        "type": "boolean"
+      }
+    },
+    "log_dir": {
+      "key": "log_dir",
+      "name": "log_dir",
+      "description": "Directory for log files. Setting this value explicitly also routes the SQLite logs database here and enables the TUI text log in this directory. When unset, log files use `$CODEX_HOME/log` and SQLite logs use `sqlite_home`. Existing SQLite logs in `sqlite_home` are not migrated automatically. A managed `sqlite_home` requirement keeps SQLite logs in that required directory.",
+      "schema": {
+        "type": "string"
+      }
+    },
+    "sqlite_home": {
+      "key": "sqlite_home",
+      "name": "sqlite_home",
+      "description": "Directory where Codex stores the SQLite state DB. Defaults to `$CODEX_SQLITE_HOME` when set. Otherwise uses `$CODEX_HOME`.",
+      "schema": {
+        "type": "string"
+      }
+    },
+    "model": {
+      "key": "model",
+      "name": "model",
+      "description": "Optional override of model selection.",
+      "schema": {
+        "description": "Optional override of model selection.",
+        "type": "string"
+      }
+    },
+    "model_reasoning_effort": {
+      "key": "model_reasoning_effort",
+      "name": "model_reasoning_effort",
+      "description": "A non-empty reasoning effort value advertised by the model.",
+      "schema": {
+        "description": "A non-empty reasoning effort value advertised by the model.",
+        "minLength": 1,
+        "type": "string"
+      }
+    },
+    "service_tier": {
+      "key": "service_tier",
+      "name": "service_tier",
+      "description": "Optional explicit service tier request id for new turns (for example `default`, `priority`, or `flex`; legacy `fast` also works).",
+      "schema": {
+        "description": "Optional explicit service tier request id for new turns (for example `default`, `priority`, or `flex`; legacy `fast` also works).",
+        "type": "string"
+      }
+    },
+    "sandbox_mode": {
+      "key": "sandbox_mode",
+      "name": "sandbox_mode",
+      "description": "Sandbox mode to use.",
+      "schema": {
+        "type": "string",
+        "enum": [
+          "workspace-write",
+          "read-only",
+          "danger-full-access"
+        ]
+      }
+    },
+    "sandbox_workspace_write": {
+      "key": "sandbox_workspace_write",
+      "name": "sandbox_workspace_write",
+      "description": "Sandbox configuration to apply if `sandbox` is `WorkspaceWrite`.",
+      "schema": {
+        "allOf": [
+          {
+            "additionalProperties": false,
+            "properties": {
+              "exclude_slash_tmp": {
+                "default": false,
+                "type": "boolean"
+              },
+              "exclude_tmpdir_env_var": {
+                "default": false,
+                "type": "boolean"
+              },
+              "network_access": {
+                "default": false,
+                "type": "boolean"
+              },
+              "writable_roots": {
+                "default": [],
+                "items": {
+                  "description": "A path that is guaranteed to be absolute and normalized (though it is not guaranteed to be canonicalized or exist on the filesystem).\n\nIMPORTANT: When deserializing an `AbsolutePathBuf`, a base path must be set using [AbsolutePathBufGuard::new]. If no base path is set, the deserialization will fail unless the path being deserialized is already absolute.",
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "type": "object"
+          }
+        ],
+        "description": "Sandbox configuration to apply if `sandbox` is `WorkspaceWrite`."
+      }
+    },
+    "sandbox_workspace_write.network_access": {
+      "key": "sandbox_workspace_write.network_access",
+      "name": "sandbox_workspace_write.network_access",
+      "description": "Whether the workspace-write sandbox permits network access. Other sandbox modes keep their own permission semantics.",
+      "schema": {
+        "type": "boolean",
+        "default": false
+      }
+    },
+    "approval_policy": {
+      "key": "approval_policy",
+      "name": "approval_policy",
+      "description": "Default approval policy for executing commands.",
+      "schema": {
+        "type": "string",
+        "enum": [
+          "never",
+          "on-request"
+        ]
+      }
+    }
+  }
+}
