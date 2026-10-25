@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "dsh-codex-runner",
+    "description": "Run and manage Codex CLI tasks in DSH with complete answers, background execution, live settings, optional quota reminders and recovery, and experimental model and reasoning-effort selection"
+  }
+}

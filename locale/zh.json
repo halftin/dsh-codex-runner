@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "dsh-codex-runner",
+    "description": "在 DSH 中运行和管理 Codex CLI 任务，支持完整答复、后台运行、实时设置、可选的额度提醒与自动恢复，以及实验性的模型与思考强度自动补全"
+  }
+}

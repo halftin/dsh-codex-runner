@@ -2,7 +2,7 @@
   "id": "dsh-external/dsh-codex-runner",
   "version": "0.5.0-rc.2",
   "main": "./lib/index.js",
-  "description": "Codex task orchestration with complete final answers, active-turn steering, optional quota reminders and recovery, workspace-scoped conversation reading, experimental rule-based model selection and native settings.",
+  "description": "Run and manage Codex CLI tasks in DSH with complete answers, background execution, live settings, optional quota reminders and recovery, and experimental model and reasoning-effort selection",
   "engines": {
     "dsh": ">=0.2.0-rc.2 <0.3.0"
   },

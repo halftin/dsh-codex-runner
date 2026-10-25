@@ -1,5 +1,7 @@
 # dsh-codex-runner
 
+中文 | [English](README.en.md)
+
 DSH 插件：运行 Codex CLI 任务，返回完整最终答复和运行状态，支持后台运行、准确查询、续跑、插话和取消。
 
 当前为首个发布版本 `0.5.0-rc.2`，仅支持 Windows。需要 Node `>=20`、DSH `>=0.2.0-rc.2 <0.3.0` 和已登录的 Codex CLI。已在 Windows / Node 24.19.0 / DSH 0.2.1-rc.3 Web profile 完成隔离安装、设置保存、后台任务重启查询、取消和卸载验收；验收使用确定性假 CLI，未调用真实模型。最新版桌面安装器、其他 Windows 机器及 Node 20/22 未完成本轮实际验收，版本范围不表示其中每个版本都经过测试。Codex CLI 基线为 `0.160.1`；兼容驱动需要 `exec --json`、`exec resume` 与 `queue`，新驱动需要 App Server v2 协议。自动补全模型和思考强度仍为默认关闭的 beta 功能，尚未验证复杂度判断准确率或实际额度节省
@@ -15,10 +17,10 @@ dsh plugin --profile <profile> add <发行包.tgz>
 dsh --profile <profile> --dump-config
 ```
 
-独立 GitHub 仓库建立后也可使用固定 commit：
+也可从 GitHub 仓库安装，使用固定 commit：
 
 ```text
-dsh plugin --profile <profile> add github:<owner>/dsh-codex-runner#<commit>
+dsh plugin --profile <profile> add github:halftin/dsh-codex-runner#<commit>
 ```
 
 仓库根必须是本包的 package.json。提交 lib、drivers 等可运行 JS，不需要构建或 prepare 脚本。DSH 通过 dsh.bundle.patch 加入 profile 的 bundles 列表；单纯执行裸 pnpm 不保证激活该层。
@@ -115,6 +117,8 @@ codex_run(prompt_file="next.md", label="resume-task", model="<可用模型 ID>",
 增强选档策略为 enforce 时，显式覆盖须写 override_reason；off 和 audit 不强制额外解释。所有模式仍受 maxEffortAllowed 限制。选档理由保存在 selection.json 和工具返回值中。这是可审计的启发式规则，并非能准确理解所有任务的分类器，也不承诺固定额度节省。
 
 ## 设置
+
+插件介绍、设置控件和注册表编辑器随 DSH 的界面语言切换：中文界面显示中文，英文界面显示英文；模型标识、配置键和协议状态保留原始值。更新插件后完整重启 DSH，以重新读取插件元数据
 
 优先级由低到高：代码默认 → DSH profile 配置 → 支持的单次参数。设置页控件与“编辑完整配置与注册表”编辑器共用同一份 profile 数据，由 DSH 原生配置服务保存；不再读取或写入独立的全局、工作区设置 JSON 文件。已有独立文件不迁移、不删除，也不会覆盖页面设置。运行记录和日志仍保存在各工作区的 `.codex-runner/logs/`。
 

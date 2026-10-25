@@ -3,12 +3,14 @@
 !/.gitignore
 !/.gitattributes
 !/README.md
+!/README.en.md
 !/LICENSE
 !/package.json
 !/dsh.plugin.json
 !/cordis.patch.yml
 !/lib/
 !/drivers/
+!/locale/
 
 node_modules/
 .codex-runner/
