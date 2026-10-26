@@ -1,4 +1,4 @@
-# Only the installable plugin and its user-facing README/license are tracked.
+# Track the plugin, user-facing documentation, license, and Git rules only.
 /*
 !/.gitignore
 !/.gitattributes
@@ -11,6 +11,24 @@
 !/lib/
 !/drivers/
 !/locale/
+!/docs/
+/docs/*
+!/docs/README.md
+!/docs/README.en.md
+!/docs/installation.md
+!/docs/installation.en.md
+!/docs/tools.md
+!/docs/tools.en.md
+!/docs/configuration.md
+!/docs/configuration.en.md
+!/docs/runtime.md
+!/docs/runtime.en.md
+!/docs/api/
+/docs/api/*
+!/docs/api/openapi.json
+!/docs/api/openapi.en.json
+!/docs/api/README.md
+!/docs/api/README.en.md
 
 node_modules/
 .codex-runner/

@@ -34,6 +34,20 @@
     "cordis.patch.yml",
     "README.md",
     "README.en.md",
+    "docs/README.md",
+    "docs/README.en.md",
+    "docs/installation.md",
+    "docs/installation.en.md",
+    "docs/tools.md",
+    "docs/tools.en.md",
+    "docs/configuration.md",
+    "docs/configuration.en.md",
+    "docs/runtime.md",
+    "docs/runtime.en.md",
+    "docs/api/openapi.json",
+    "docs/api/openapi.en.json",
+    "docs/api/README.md",
+    "docs/api/README.en.md",
     "LICENSE"
   ],
   "dsh": {
@@ -56,6 +70,14 @@
     "@deepseek-ai/schemastery": "~3.18.4"
   },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/halftin/dsh-codex-runner.git"
+  },
+  "homepage": "https://github.com/halftin/dsh-codex-runner#readme",
+  "bugs": {
+    "url": "https://github.com/halftin/dsh-codex-runner/issues"
+  },
   "os": [
     "win32"
   ]

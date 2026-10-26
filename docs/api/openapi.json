@@ -1,0 +1,2321 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "dsh-codex-runner 通信接口",
+    "version": "0.5.0-rc.2",
+    "description": "供 Apipost 导入的插件设置页与宿主通信接口，不包含 codex_run 等 15 个模型工具，也不是独立 HTTP 服务。必须启用插件和 DSH Connection Fetch。所有接口要求 DSH owner 权限；在 Apipost 把示例 server 替换为实际 DSH Web 服务地址（包含端口和部署前缀），并配置有效 owner 会话 Cookie。Cookie 名称按宿主地址动态生成，本文件用完整 Cookie 请求头建模，不引入新的插件 API Key。不要使用 Codex 登录凭据替代 DSH 会话。HTTP 200 的业务错误查看 result.ok/result.error。所有示例均为合成数据，没有包含真实凭据、账号或本机路径。",
+    "license": {
+      "name": "MIT",
+      "url": "https://github.com/halftin/dsh-codex-runner/blob/main/LICENSE"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost",
+      "description": "占位地址；请替换为实际 DSH Web 服务根地址，含端口与部署前缀，HTTPS 部署应使用 https"
+    }
+  ],
+  "tags": [
+    {
+      "name": "模型目录",
+      "description": "目录读取和刷新，不启动模型回合"
+    },
+    {
+      "name": "额度与子任务",
+      "description": "账号额度和运行快照读取"
+    },
+    {
+      "name": "注册表编辑",
+      "description": "字段规则、中文翻译、预检与保存"
+    },
+    {
+      "name": "运行事件",
+      "description": "SSE 终态通知"
+    }
+  ],
+  "security": [
+    {
+      "DshOwnerSession": []
+    }
+  ],
+  "paths": {
+    "/api/codex-runner/getCatalog": {
+      "post": {
+        "tags": [
+          "模型目录"
+        ],
+        "operationId": "getCatalog",
+        "summary": "读取模型目录与字段参考",
+        "description": "读取全部模型、支持的思考强度和服务档，以及注册表和本地化元数据。refresh=true 请求重新查询，缓存过期时也可能刷新。可能启动 CLI 的只读查询并更新缓存，不启动模型回合。这里返回的是服务目录结构，与 codex_models 工具经过裁剪的输出不同。示例模型仅展示格式，不能当作当前账号可用性证据\n\nHTTP 200 仅表示封装处理完成，必须检查 result.ok；业务失败在 result.error 中，不会自动变为 HTTP 400 或 409。请求体必须是 client-request 封装，不能直接发送 payload。",
+        "x-dsh-request-max-code-units": 16384,
+        "requestBody": {
+          "required": true,
+          "description": "application/json；整个正文最多 16384 个 JS 字符串代码单元；payload 省略时按空对象处理，但需要参数的接口仍会返回业务错误",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetCatalogRequest"
+              },
+              "example": {
+                "type": "client-request",
+                "rpcId": "11111111-1111-4111-8111-111111111111",
+                "method": "codex-runner/getCatalog",
+                "payload": {
+                  "refresh": false
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功或业务错误，通过 result.ok 区分",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetCatalogResponse"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "成功示例（示意数据）",
+                    "value": {
+                      "type": "server-response",
+                      "rpcId": "11111111-1111-4111-8111-111111111111",
+                      "result": {
+                        "ok": true,
+                        "value": {
+                          "models": [
+                            {
+                              "id": "gpt-6.1-sol",
+                              "model": "gpt-6.1-sol",
+                              "displayName": "gpt-6.1-sol",
+                              "description": "Example model",
+                              "hidden": false,
+                              "isDefault": true,
+                              "defaultReasoningEffort": "high",
+                              "efforts": [
+                                {
+                                  "id": "high",
+                                  "description": "High effort"
+                                }
+                              ],
+                              "serviceTiers": [],
+                              "inputModalities": [],
+                              "multiAgentVersion": null
+                            }
+                          ],
+                          "source": "fallback",
+                          "fetchedAt": null,
+                          "stale": true,
+                          "cached": false,
+                          "configuration": {
+                            "version": 1,
+                            "codexVersion": null,
+                            "source": "bundled",
+                            "fields": {},
+                            "config": {},
+                            "error": null
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "businessError": {
+                    "summary": "业务错误仍为 HTTP 200",
+                    "value": {
+                      "type": "server-response",
+                      "rpcId": "11111111-1111-4111-8111-111111111111",
+                      "result": {
+                        "ok": false,
+                        "error": {
+                          "code": "codex-runner/request",
+                          "message": "Invalid read-only service request",
+                          "details": {}
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "413": {
+            "$ref": "#/components/responses/RequestTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/ExpectedJson"
+          },
+          "default": {
+            "$ref": "#/components/responses/HostError"
+          }
+        }
+      }
+    },
+    "/api/codex-runner/refreshCatalog": {
+      "post": {
+        "tags": [
+          "模型目录"
+        ],
+        "operationId": "refreshCatalog",
+        "summary": "强制刷新模型目录",
+        "description": "等价于服务 getCatalog({refresh:true})。payload 必须为空对象或省略。原生查询失败时可以成功返回带 stale=true/error 的回退目录，应结合 value 的来源与错误判断数据新鲜度\n\nHTTP 200 仅表示封装处理完成，必须检查 result.ok；业务失败在 result.error 中，不会自动变为 HTTP 400 或 409。请求体必须是 client-request 封装，不能直接发送 payload。",
+        "x-dsh-request-max-code-units": 16384,
+        "requestBody": {
+          "required": true,
+          "description": "application/json；整个正文最多 16384 个 JS 字符串代码单元；payload 省略时按空对象处理，但需要参数的接口仍会返回业务错误",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshCatalogRequest"
+              },
+              "example": {
+                "type": "client-request",
+                "rpcId": "11111111-1111-4111-8111-111111111111",
+                "method": "codex-runner/refreshCatalog",
+                "payload": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功或业务错误，通过 result.ok 区分",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefreshCatalogResponse"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "成功示例（示意数据）",
+                    "value": {
+                      "type": "server-response",
+                      "rpcId": "11111111-1111-4111-8111-111111111111",
+                      "result": {
+                        "ok": true,
+                        "value": {
+                          "models": [
+                            {
+                              "id": "gpt-6.1-sol",
+                              "model": "gpt-6.1-sol",
+                              "displayName": "gpt-6.1-sol",
+                              "description": "Example model",
+                              "hidden": false,
+                              "isDefault": true,
+                              "defaultReasoningEffort": "high",
+                              "efforts": [
+                                {
+                                  "id": "high",
+                                  "description": "High effort"
+                                }
+                              ],
+                              "serviceTiers": [],
+                              "inputModalities": [],
+                              "multiAgentVersion": null
+                            }
+                          ],
+                          "source": "fallback",
+                          "fetchedAt": null,
+                          "stale": true,
+                          "cached": false,
+                          "configuration": {
+                            "version": 1,
+                            "codexVersion": null,
+                            "source": "bundled",
+                            "fields": {},
+                            "config": {},
+                            "error": null
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "businessError": {
+                    "summary": "业务错误仍为 HTTP 200",
+                    "value": {
+                      "type": "server-response",
+                      "rpcId": "11111111-1111-4111-8111-111111111111",
+                      "result": {
+                        "ok": false,
+                        "error": {
+                          "code": "codex-runner/request",
+                          "message": "Invalid read-only service request",
+                          "details": {}
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "413": {
+            "$ref": "#/components/responses/RequestTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/ExpectedJson"
+          },
+          "default": {
+            "$ref": "#/components/responses/HostError"
+          }
+        }
+      }
+    },
+    "/api/codex-runner/getQuota": {
+      "post": {
+        "tags": [
+          "额度与子任务"
+        ],
+        "operationId": "getQuota",
+        "summary": "查询账号级额度和恢复状态",
+        "description": "返回账号级 5 小时/7 天窗口、采样时间、告警、探测和恢复状态，不按工作区分配额度。fresh 仅查询账号接口，不启动模型回合；三分钟限频不能通过 refresh 绕过。active 读取活动运行快照，不发送消息。无数据时 status=unknown，失败时可能仍保留旧数据\n\nHTTP 200 仅表示封装处理完成，必须检查 result.ok；业务失败在 result.error 中，不会自动变为 HTTP 400 或 409。请求体必须是 client-request 封装，不能直接发送 payload。",
+        "x-dsh-request-max-code-units": 16384,
+        "requestBody": {
+          "required": true,
+          "description": "application/json；整个正文最多 16384 个 JS 字符串代码单元；payload 省略时按空对象处理，但需要参数的接口仍会返回业务错误",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetQuotaRequest"
+              },
+              "example": {
+                "type": "client-request",
+                "rpcId": "11111111-1111-4111-8111-111111111111",
+                "method": "codex-runner/getQuota",
+                "payload": {
+                  "probe": "none",
+                  "timeoutMs": 15000,
+                  "refresh": false
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功或业务错误，通过 result.ok 区分",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetQuotaResponse"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "成功示例（示意数据）",
+                    "value": {
+                      "type": "server-response",
+                      "rpcId": "11111111-1111-4111-8111-111111111111",
+                      "result": {
+                        "ok": true,
+                        "value": {
+                          "status": "unknown",
+                          "scope": "account-wide",
+                          "account": {
+                            "plan": null,
+                            "fingerprint_prefix": null
+                          },
+                          "windows": {
+                            "five_hour": null,
+                            "seven_day": null
+                          },
+                          "warning": {
+                            "enabled": false,
+                            "threshold": 5,
+                            "triggered": false
+                          },
+                          "recovery": null,
+                          "source": "none",
+                          "source_detail": null,
+                          "sampled_at": null,
+                          "cached": false,
+                          "stale": false,
+                          "probe": {
+                            "fresh": null,
+                            "active": null
+                          },
+                          "transport": "unknown",
+                          "error": null,
+                          "refresh_limited": false,
+                          "next_probe_at": null
+                        }
+                      }
+                    }
+                  },
+                  "businessError": {
+                    "summary": "业务错误仍为 HTTP 200",
+                    "value": {
+                      "type": "server-response",
+                      "rpcId": "11111111-1111-4111-8111-111111111111",
+                      "result": {
+                        "ok": false,
+                        "error": {
+                          "code": "codex-runner/request",
+                          "message": "Invalid read-only service request",
+                          "details": {}
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "413": {
+            "$ref": "#/components/responses/RequestTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/ExpectedJson"
+          },
+          "default": {
+            "$ref": "#/components/responses/HostError"
+          }
+        }
+      }
+    },
+    "/api/codex-runner/getSubagents": {
+      "post": {
+        "tags": [
+          "额度与子任务"
+        ],
+        "operationId": "getSubagents",
+        "summary": "读取指定运行的原生子任务摘要",
+        "description": "只读取插件已知工作区中该运行保存的子任务状态，最多返回 32 项。运行归属、记录或元数据不可用时 result.ok=true 且 value=null。不会启动子任务、读取完整子消息或取消进程\n\nHTTP 200 仅表示封装处理完成，必须检查 result.ok；业务失败在 result.error 中，不会自动变为 HTTP 400 或 409。请求体必须是 client-request 封装，不能直接发送 payload。",
+        "x-dsh-request-max-code-units": 16384,
+        "requestBody": {
+          "required": true,
+          "description": "application/json；整个正文最多 16384 个 JS 字符串代码单元；payload 省略时按空对象处理，但需要参数的接口仍会返回业务错误",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetSubagentsRequest"
+              },
+              "example": {
+                "type": "client-request",
+                "rpcId": "11111111-1111-4111-8111-111111111111",
+                "method": "codex-runner/getSubagents",
+                "payload": {
+                  "runId": "11111111-1111-4111-8111-111111111111"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功或业务错误，通过 result.ok 区分",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetSubagentsResponse"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "成功示例（示意数据）",
+                    "value": {
+                      "type": "server-response",
+                      "rpcId": "11111111-1111-4111-8111-111111111111",
+                      "result": {
+                        "ok": true,
+                        "value": null
+                      }
+                    }
+                  },
+                  "businessError": {
+                    "summary": "业务错误仍为 HTTP 200",
+                    "value": {
+                      "type": "server-response",
+                      "rpcId": "11111111-1111-4111-8111-111111111111",
+                      "result": {
+                        "ok": false,
+                        "error": {
+                          "code": "codex-runner/request",
+                          "message": "Invalid read-only service request",
+                          "details": {}
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "413": {
+            "$ref": "#/components/responses/RequestTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/ExpectedJson"
+          },
+          "default": {
+            "$ref": "#/components/responses/HostError"
+          }
+        }
+      }
+    },
+    "/api/codex-runner/getEditorRegistry": {
+      "post": {
+        "tags": [
+          "注册表编辑"
+        ],
+        "operationId": "getEditorRegistry",
+        "summary": "读取注册表编辑文档与修订号",
+        "description": "读取合并后的字段规则、中文翻译、生成元数据、修订号及设置定义。配置值仍由 DSH configForms 管理。refresh=true 会重新发现字段并更新参考缓存，不是仅刷新内存草稿。readOnly=true 时 revision=null，不能保存。响应示例已裁剪字段且 revision 为占位符，切勿拿示例直接替代实际文档\n\nHTTP 200 仅表示封装处理完成，必须检查 result.ok；业务失败在 result.error 中，不会自动变为 HTTP 400 或 409。请求体必须是 client-request 封装，不能直接发送 payload。",
+        "x-dsh-request-max-code-units": 16384,
+        "requestBody": {
+          "required": true,
+          "description": "application/json；整个正文最多 16384 个 JS 字符串代码单元；payload 省略时按空对象处理，但需要参数的接口仍会返回业务错误",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetEditorRegistryRequest"
+              },
+              "example": {
+                "type": "client-request",
+                "rpcId": "11111111-1111-4111-8111-111111111111",
+                "method": "codex-runner/getEditorRegistry",
+                "payload": {
+                  "refresh": false
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功或业务错误，通过 result.ok 区分",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetEditorRegistryResponse"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "成功示例（示意数据）",
+                    "value": {
+                      "type": "server-response",
+                      "rpcId": "11111111-1111-4111-8111-111111111111",
+                      "result": {
+                        "ok": true,
+                        "value": {
+                          "document": {
+                            "version": 1,
+                            "codexVersion": null,
+                            "updatedAt": null,
+                            "fields": {},
+                            "translations": {
+                              "version": 1,
+                              "locale": "zh-CN",
+                              "models": {},
+                              "efforts": {},
+                              "tiers": {},
+                              "settings": {},
+                              "meta": {}
+                            }
+                          },
+                          "revision": "0000000000000000000000000000000000000000000000000000000000000000",
+                          "readOnly": false,
+                          "definitions": {},
+                          "configuration": {
+                            "version": 1,
+                            "codexVersion": null,
+                            "source": "bundled",
+                            "fields": {},
+                            "config": {},
+                            "error": null
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "businessError": {
+                    "summary": "业务错误仍为 HTTP 200",
+                    "value": {
+                      "type": "server-response",
+                      "rpcId": "11111111-1111-4111-8111-111111111111",
+                      "result": {
+                        "ok": false,
+                        "error": {
+                          "code": "codex-runner/request",
+                          "message": "Invalid read-only service request",
+                          "details": {}
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "413": {
+            "$ref": "#/components/responses/RequestTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/ExpectedJson"
+          },
+          "default": {
+            "$ref": "#/components/responses/HostError"
+          }
+        }
+      }
+    },
+    "/api/codex-runner/saveEditorRegistry": {
+      "post": {
+        "tags": [
+          "注册表编辑"
+        ],
+        "operationId": "saveEditorRegistry",
+        "summary": "预检或保存字段规则与中文翻译",
+        "description": "先调用 getEditorRegistry，复制其完整 document 和 revision，再修改所需字段。本示例仅说明结构：零值 revision 与空 fields 都是占位符，不能直接用于保存。默认示例 preview=true 仅预检；preview=false 才向固定位置写入字段覆盖和用户中文翻译，不写当前 profile 配置。codexVersion/updatedAt 不能修改，缺失内置字段会被解释为禁用；revision 过期时须重读。规则和翻译文件写入失败会尝试回滚。预检返回 configuration/definitions；保存返回新的完整编辑视图。该接口不会调用翻译模型\n\nHTTP 200 仅表示封装处理完成，必须检查 result.ok；业务失败在 result.error 中，不会自动变为 HTTP 400 或 409。请求体必须是 client-request 封装，不能直接发送 payload。",
+        "x-dsh-request-max-code-units": 1048576,
+        "requestBody": {
+          "required": true,
+          "description": "application/json；整个正文最多 1048576 个 JS 字符串代码单元，document 序列化后另限 1 MiB UTF-8 字节；宿主可能还有请求体限制",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveEditorRegistryRequest"
+              },
+              "example": {
+                "type": "client-request",
+                "rpcId": "11111111-1111-4111-8111-111111111111",
+                "method": "codex-runner/saveEditorRegistry",
+                "payload": {
+                  "document": {
+                    "version": 1,
+                    "codexVersion": null,
+                    "updatedAt": null,
+                    "fields": {},
+                    "translations": {
+                      "version": 1,
+                      "locale": "zh-CN",
+                      "models": {},
+                      "efforts": {},
+                      "tiers": {},
+                      "settings": {},
+                      "meta": {}
+                    }
+                  },
+                  "revision": "0000000000000000000000000000000000000000000000000000000000000000",
+                  "preview": true
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功或业务错误，通过 result.ok 区分",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaveEditorRegistryResponse"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "预检成功示例",
+                    "value": {
+                      "type": "server-response",
+                      "rpcId": "11111111-1111-4111-8111-111111111111",
+                      "result": {
+                        "ok": true,
+                        "value": {
+                          "configuration": {
+                            "version": 1,
+                            "codexVersion": null,
+                            "source": "bundled",
+                            "fields": {},
+                            "config": {},
+                            "error": null
+                          },
+                          "definitions": {}
+                        }
+                      }
+                    }
+                  },
+                  "businessError": {
+                    "summary": "业务错误仍为 HTTP 200",
+                    "value": {
+                      "type": "server-response",
+                      "rpcId": "11111111-1111-4111-8111-111111111111",
+                      "result": {
+                        "ok": false,
+                        "error": {
+                          "code": "codex-runner/request",
+                          "message": "Registry changed on disk. Reopen the editor before saving.",
+                          "details": {}
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "413": {
+            "$ref": "#/components/responses/RequestTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/ExpectedJson"
+          },
+          "default": {
+            "$ref": "#/components/responses/HostError"
+          }
+        }
+      }
+    },
+    "/api/codex-runner/run-events": {
+      "get": {
+        "tags": [
+          "运行事件"
+        ],
+        "operationId": "runEvents",
+        "summary": "订阅运行终态事件（SSE）",
+        "description": "需要宿主 connection、webServer、rpc.handle 及 runEventStream 支持，缺失时路由不注册。连接先收到注释，之后收到 data: JSON 形式的终态失效通知。不是进度全文、不是模型 token 流，也不使用 server-response 封装。每个运行只发一次终态事件，不重放历史，没有 Last-Event-ID 恢复保证。连接可能一直保持而没有 data；需要流式客户端，普通 HTTP 测试可能超时。只订阅当前进程已登记的运行，不会启动任务",
+        "responses": {
+          "200": {
+            "description": "持续的 Server-Sent Events；每条 data 后有两个换行",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": ": codex-runner read-only run invalidation\n\ndata: {\"run_id\":\"11111111-1111-4111-8111-111111111111\",\"status\":\"completed\"}\n\n"
+              }
+            },
+            "x-dsh-event-data": {
+              "$ref": "#/components/schemas/RunEvent"
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "default": {
+            "$ref": "#/components/responses/HostError"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "DshOwnerSession": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Cookie",
+        "description": "填写已通过 DSH owner 登录的完整 Cookie 请求头值（name=value; ...）。名称与宿主地址有关，不应硬编码。此处仅描述 HTTP 会话传递方式；真正的签名校验和 owner 权限检查由 DSH Connection 执行。请在 Apipost 私有环境中配置，不写入共享文档"
+      }
+    },
+    "schemas": {
+      "RpcId": {
+        "type": "string",
+        "description": "小写 UUID v4；rpcId 用于请求关联，响应原样返回。runId 使用相同格式",
+        "format": "uuid",
+        "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$",
+        "example": "11111111-1111-4111-8111-111111111111"
+      },
+      "ServiceError": {
+        "type": "object",
+        "required": [
+          "ok",
+          "error"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          },
+          "error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message",
+              "details"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "codex-runner/request"
+                ]
+              },
+              "message": {
+                "type": "string",
+                "description": "校验、读取或保存失败原因"
+              },
+              "details": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      },
+      "RefreshPayload": {
+        "type": "object",
+        "properties": {
+          "refresh": {
+            "type": "boolean",
+            "description": "是否请求重新发现/刷新；可能更新本地参考缓存，但不启动模型回合",
+            "default": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "EmptyPayload": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "QuotaPayload": {
+        "type": "object",
+        "properties": {
+          "probe": {
+            "type": "string",
+            "description": "none 读取已有数据；fresh 查询账号；active 读取活动运行快照；both 合并两者，不发送 steer",
+            "enum": [
+              "none",
+              "fresh",
+              "active",
+              "both"
+            ],
+            "default": "none"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "description": "原生查询超时，毫秒",
+            "minimum": 1,
+            "maximum": 60000,
+            "default": 15000
+          },
+          "refresh": {
+            "type": "boolean",
+            "description": "刷新标记；不会绕过 fresh 查询的三分钟限频",
+            "default": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "SubagentsPayload": {
+        "type": "object",
+        "required": [
+          "runId"
+        ],
+        "properties": {
+          "runId": {
+            "$ref": "#/components/schemas/RpcId"
+          }
+        },
+        "additionalProperties": false
+      },
+      "NativeJsonSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "description": "作为数据传递的 Codex JSON Schema，不是本 OpenAPI 的 Schema Object；可能含原生扩展和递归定义"
+      },
+      "FieldRule": {
+        "type": "object",
+        "properties": {
+          "allow": {
+            "type": "boolean",
+            "description": "允许通用配置透传"
+          },
+          "used": {
+            "type": "boolean",
+            "description": "插件专用控制使用的字段"
+          },
+          "profile": {
+            "type": "boolean",
+            "description": "内置控件声明"
+          },
+          "aliasOf": {
+            "type": "string",
+            "description": "目标字段键；须满足原生安全键规则"
+          },
+          "schema": {
+            "$ref": "#/components/schemas/NativeJsonSchema"
+          },
+          "fallbackSchema": {
+            "$ref": "#/components/schemas/NativeJsonSchema"
+          },
+          "name": {
+            "type": "string",
+            "description": "字段名称",
+            "maxLength": 4000
+          },
+          "description": {
+            "type": "string",
+            "description": "字段说明",
+            "maxLength": 4000
+          },
+          "deprecated": {
+            "type": "boolean",
+            "description": "弃用标记"
+          },
+          "minVersion": {
+            "type": "string",
+            "description": "最小 Codex 版本，含端点"
+          },
+          "maxVersion": {
+            "type": "string",
+            "description": "最大 Codex 版本，含端点"
+          },
+          "excludedValues": {
+            "type": "array",
+            "maxItems": 200,
+            "items": {
+              "type": "string"
+            },
+            "description": "从原生枚举中排除的字符串值"
+          }
+        },
+        "additionalProperties": false,
+        "description": "兼容规则；键为受校验的 Codex 字段名，不能借别名绕过权限控制"
+      },
+      "TranslationText": {
+        "type": "string",
+        "description": "至多 200 字符的单行纯文本；不含尖括号、控制字符或换行",
+        "maxLength": 200,
+        "pattern": "^[^<>\\r\\n\\u0000-\\u001f\\u007f\\u2028\\u2029]*$"
+      },
+      "DescriptionTranslation": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "$ref": "#/components/schemas/TranslationText"
+          },
+          "_source": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "兼容读取的来源元数据，手动保存不重新生成"
+          }
+        },
+        "additionalProperties": false
+      },
+      "NamedTranslation": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "$ref": "#/components/schemas/TranslationText"
+          },
+          "description": {
+            "$ref": "#/components/schemas/TranslationText"
+          },
+          "_source": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "兼容读取的来源元数据"
+          }
+        },
+        "additionalProperties": false
+      },
+      "Translations": {
+        "type": "object",
+        "required": [
+          "version",
+          "locale"
+        ],
+        "properties": {
+          "version": {
+            "type": "integer",
+            "enum": [
+              1
+            ]
+          },
+          "locale": {
+            "type": "string",
+            "enum": [
+              "zh-CN"
+            ]
+          },
+          "models": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/DescriptionTranslation"
+            }
+          },
+          "efforts": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/DescriptionTranslation"
+            }
+          },
+          "tiers": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/NamedTranslation"
+            }
+          },
+          "settings": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/NamedTranslation"
+            }
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true,
+        "description": "用户中文翻译；空白值继承内置文本，保留原生 ID，不自动调用翻译模型"
+      },
+      "RegistryDocument": {
+        "type": "object",
+        "required": [
+          "version",
+          "codexVersion",
+          "updatedAt",
+          "fields",
+          "translations"
+        ],
+        "properties": {
+          "version": {
+            "type": "integer",
+            "enum": [
+              1
+            ]
+          },
+          "codexVersion": {
+            "type": "string",
+            "description": "系统生成，保存时必须保留 getEditorRegistry 的原值",
+            "nullable": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "系统生成的最后成功刷新时间，保存时必须保留原值",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "fields": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/FieldRule"
+            },
+            "description": "完整合并后的字段规则；不要以空对象替代读取结果"
+          },
+          "translations": {
+            "$ref": "#/components/schemas/Translations"
+          }
+        },
+        "additionalProperties": false,
+        "description": "先读取当前文档，修改需要的字段后原样保留其余内容；省略内置字段会被解释为禁用该字段"
+      },
+      "SaveRegistryPayload": {
+        "type": "object",
+        "required": [
+          "document",
+          "revision"
+        ],
+        "properties": {
+          "document": {
+            "$ref": "#/components/schemas/RegistryDocument"
+          },
+          "revision": {
+            "type": "string",
+            "description": "必须使用最近 getEditorRegistry 返回的修订 SHA256；过期时返回业务错误",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "preview": {
+            "type": "boolean",
+            "description": "true 仅预检，不写用户规则/翻译文件；false 才提交保存",
+            "default": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "FieldRegistry": {
+        "type": "object",
+        "required": [
+          "version",
+          "fields",
+          "config"
+        ],
+        "properties": {
+          "version": {
+            "type": "integer",
+            "enum": [
+              1
+            ]
+          },
+          "codexVersion": {
+            "type": "string",
+            "description": "本地 Codex 版本",
+            "nullable": true
+          },
+          "source": {
+            "type": "string",
+            "description": "注册表来源，例如 bundled、cache、installed-protocol"
+          },
+          "referenceSource": {
+            "type": "string",
+            "description": "参考定义来源"
+          },
+          "referenceVersion": {
+            "type": "string",
+            "description": "参考快照版本",
+            "nullable": true
+          },
+          "referenceMatched": {
+            "type": "boolean"
+          },
+          "referenceFieldCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "localFieldCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "protocolSchemaCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "fields": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "description": "已编译字段定义，包含动态 schema 与兼容元数据"
+          },
+          "config": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "允许通用透传的字段及其编译配置，值随原生版本变化"
+          },
+          "error": {
+            "type": "string",
+            "description": "发现或读取诊断",
+            "nullable": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "最后成功更新",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "stale": {
+            "type": "boolean",
+            "description": "缓存是否过期"
+          },
+          "fallback": {
+            "type": "boolean"
+          },
+          "fallbackFile": {
+            "type": "string",
+            "description": "内置回退文件的相对路径"
+          },
+          "paths": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "nullable": true
+            },
+            "description": "宿主返回的本地文件位置；可能含本机路径，不应作为公开示例原样分享"
+          }
+        },
+        "additionalProperties": true,
+        "description": "原生字段和发现元数据随 CLI 版本变化；额外字段被保留"
+      },
+      "SettingDefinition": {
+        "type": "object",
+        "required": [
+          "source",
+          "nativeKey",
+          "schema",
+          "defaultValue"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "codex",
+              "plugin"
+            ]
+          },
+          "nativeKey": {
+            "type": "string",
+            "description": "对应原生键；插件自身设置为 null",
+            "nullable": true
+          },
+          "schema": {
+            "$ref": "#/components/schemas/NativeJsonSchema"
+          },
+          "defaultValue": {
+            "description": "该设置的默认 JSON 值，可为 null"
+          }
+        },
+        "additionalProperties": true
+      },
+      "RegistryEditorView": {
+        "type": "object",
+        "required": [
+          "document",
+          "revision",
+          "readOnly",
+          "definitions",
+          "configuration"
+        ],
+        "properties": {
+          "document": {
+            "$ref": "#/components/schemas/RegistryDocument"
+          },
+          "revision": {
+            "type": "string",
+            "description": "可编辑时为修订 SHA256；只读时为 null",
+            "nullable": true,
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "readOnly": {
+            "type": "boolean",
+            "description": "用户文件损坏或不可读取时为 true"
+          },
+          "definitions": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SettingDefinition"
+            },
+            "description": "当前插件配置字段定义，不包含当前 profile 的实际设置值"
+          },
+          "configuration": {
+            "$ref": "#/components/schemas/FieldRegistry"
+          }
+        },
+        "additionalProperties": true
+      },
+      "RegistryPreviewView": {
+        "type": "object",
+        "required": [
+          "configuration",
+          "definitions"
+        ],
+        "properties": {
+          "configuration": {
+            "$ref": "#/components/schemas/FieldRegistry"
+          },
+          "definitions": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SettingDefinition"
+            }
+          }
+        },
+        "additionalProperties": false,
+        "description": "preview=true 时的返回结果，不包含新的 document、revision 或 readOnly"
+      },
+      "Effort": {
+        "type": "object",
+        "required": [
+          "id",
+          "description"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "原生强度标识"
+          },
+          "description": {
+            "type": "string",
+            "description": "原生说明"
+          },
+          "localized": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true
+      },
+      "ServiceTier": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "原生服务档标识"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "localized": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true
+      },
+      "Model": {
+        "type": "object",
+        "required": [
+          "id",
+          "model",
+          "displayName",
+          "description",
+          "hidden",
+          "isDefault",
+          "defaultReasoningEffort",
+          "efforts",
+          "serviceTiers"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "模型 ID"
+          },
+          "model": {
+            "type": "string",
+            "description": "归一化后与 id 一致"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "hidden": {
+            "type": "boolean"
+          },
+          "isDefault": {
+            "type": "boolean"
+          },
+          "defaultReasoningEffort": {
+            "type": "string"
+          },
+          "efforts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Effort"
+            }
+          },
+          "serviceTiers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ServiceTier"
+            }
+          },
+          "inputModalities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "multiAgentVersion": {
+            "description": "原生子任务能力版本，未提供时为 null"
+          },
+          "localized": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true
+      },
+      "CatalogView": {
+        "type": "object",
+        "required": [
+          "models",
+          "source",
+          "fetchedAt",
+          "stale",
+          "configuration"
+        ],
+        "properties": {
+          "models": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Model"
+            }
+          },
+          "source": {
+            "type": "string",
+            "description": "app-server、fallback 或缓存中保留的来源"
+          },
+          "fetchedAt": {
+            "type": "string",
+            "description": "目录采样时间",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "stale": {
+            "type": "boolean"
+          },
+          "cached": {
+            "type": "boolean"
+          },
+          "error": {
+            "type": "string",
+            "description": "刷新失败时的错误，成功时通常省略"
+          },
+          "configuration": {
+            "$ref": "#/components/schemas/FieldRegistry"
+          },
+          "settings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "description": "注册表设置的本地化说明，不是当前 profile 配置"
+          },
+          "accountFingerprint": {
+            "type": "string",
+            "description": "账号指纹；不是登录凭据",
+            "nullable": true
+          },
+          "cacheKey": {
+            "type": "string"
+          },
+          "cacheError": {
+            "type": "string"
+          },
+          "i18n_error": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      },
+      "QuotaWindow": {
+        "type": "object",
+        "required": [
+          "used_percent",
+          "remaining_percent",
+          "resets_at",
+          "reset_in_sec"
+        ],
+        "properties": {
+          "used_percent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "remaining_percent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "resets_at": {
+            "type": "string",
+            "description": "额度重置时间，未知为 null",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "reset_in_sec": {
+            "type": "integer",
+            "minimum": 0,
+            "nullable": true,
+            "description": "相对本次响应的重置倒计时秒数"
+          }
+        },
+        "nullable": true,
+        "additionalProperties": true
+      },
+      "QuotaProbe": {
+        "type": "object",
+        "required": [
+          "ok",
+          "latency_ms",
+          "error"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "latency_ms": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "error": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "nullable": true,
+        "additionalProperties": true
+      },
+      "RecoveryState": {
+        "type": "object",
+        "nullable": true,
+        "additionalProperties": true,
+        "description": "原运行的恢复状态，可能包含 phase、run_id、generation、resume_at、schedule_id、resumed_run_id、error、retention_warning；没有记录时为 null"
+      },
+      "QuotaView": {
+        "type": "object",
+        "required": [
+          "status",
+          "scope",
+          "account",
+          "windows",
+          "warning",
+          "recovery",
+          "source",
+          "source_detail",
+          "sampled_at",
+          "cached",
+          "stale",
+          "probe",
+          "transport",
+          "error",
+          "refresh_limited",
+          "next_probe_at"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "stale",
+              "unknown",
+              "unavailable"
+            ]
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "account-wide"
+            ]
+          },
+          "account": {
+            "type": "object",
+            "required": [
+              "plan",
+              "fingerprint_prefix"
+            ],
+            "properties": {
+              "plan": {
+                "type": "string",
+                "description": "账号计划",
+                "nullable": true
+              },
+              "fingerprint_prefix": {
+                "type": "string",
+                "description": "账号指纹前缀",
+                "nullable": true
+              }
+            }
+          },
+          "windows": {
+            "type": "object",
+            "required": [
+              "five_hour",
+              "seven_day"
+            ],
+            "properties": {
+              "five_hour": {
+                "$ref": "#/components/schemas/QuotaWindow"
+              },
+              "seven_day": {
+                "$ref": "#/components/schemas/QuotaWindow"
+              }
+            }
+          },
+          "warning": {
+            "type": "object",
+            "required": [
+              "enabled",
+              "threshold",
+              "triggered"
+            ],
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "threshold": {
+                "type": "number"
+              },
+              "triggered": {
+                "type": "boolean"
+              }
+            }
+          },
+          "recovery": {
+            "$ref": "#/components/schemas/RecoveryState"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "app-server",
+              "last-run",
+              "none"
+            ]
+          },
+          "source_detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "sampled_at": {
+            "type": "string",
+            "description": "数据采样时间",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "cached": {
+            "type": "boolean"
+          },
+          "stale": {
+            "type": "boolean"
+          },
+          "probe": {
+            "type": "object",
+            "required": [
+              "fresh",
+              "active"
+            ],
+            "properties": {
+              "fresh": {
+                "$ref": "#/components/schemas/QuotaProbe"
+              },
+              "active": {
+                "$ref": "#/components/schemas/QuotaProbe"
+              }
+            }
+          },
+          "transport": {
+            "type": "string",
+            "enum": [
+              "not-probed",
+              "reachable",
+              "unreachable",
+              "unknown"
+            ]
+          },
+          "error": {
+            "type": "string",
+            "nullable": true
+          },
+          "refresh_limited": {
+            "type": "boolean"
+          },
+          "next_probe_at": {
+            "type": "string",
+            "description": "下次允许 fresh 探测的时间",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": true
+      },
+      "SubagentItem": {
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "tool",
+          "updated_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "running",
+              "completed",
+              "failed",
+              "unknown"
+            ]
+          },
+          "tool": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "updated_at": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          }
+        }
+      },
+      "SubagentsView": {
+        "type": "object",
+        "required": [
+          "count",
+          "running",
+          "completed",
+          "failed",
+          "unknown",
+          "truncated",
+          "items"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "running": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "completed": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "failed": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "unknown": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "items": {
+            "type": "array",
+            "maxItems": 32,
+            "items": {
+              "$ref": "#/components/schemas/SubagentItem"
+            }
+          }
+        },
+        "nullable": true,
+        "additionalProperties": false,
+        "description": "找不到运行归属、记录或元数据时，value 直接为 null"
+      },
+      "RunEvent": {
+        "type": "object",
+        "required": [
+          "run_id",
+          "status"
+        ],
+        "properties": {
+          "run_id": {
+            "$ref": "#/components/schemas/RpcId"
+          },
+          "status": {
+            "type": "string",
+            "description": "本次运行的终态状态，例如 completed、failed、cancelled"
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetCatalogRequest": {
+        "type": "object",
+        "required": [
+          "type",
+          "rpcId",
+          "method"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "client-request"
+            ]
+          },
+          "rpcId": {
+            "$ref": "#/components/schemas/RpcId"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "codex-runner/getCatalog"
+            ]
+          },
+          "payload": {
+            "$ref": "#/components/schemas/RefreshPayload"
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetCatalogResponse": {
+        "type": "object",
+        "required": [
+          "type",
+          "rpcId",
+          "result"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "server-response"
+            ]
+          },
+          "rpcId": {
+            "$ref": "#/components/schemas/RpcId"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": [
+                  "ok",
+                  "value"
+                ],
+                "properties": {
+                  "ok": {
+                    "type": "boolean",
+                    "enum": [
+                      true
+                    ]
+                  },
+                  "value": {
+                    "$ref": "#/components/schemas/CatalogView"
+                  }
+                }
+              },
+              {
+                "$ref": "#/components/schemas/ServiceError"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "RefreshCatalogRequest": {
+        "type": "object",
+        "required": [
+          "type",
+          "rpcId",
+          "method"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "client-request"
+            ]
+          },
+          "rpcId": {
+            "$ref": "#/components/schemas/RpcId"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "codex-runner/refreshCatalog"
+            ]
+          },
+          "payload": {
+            "$ref": "#/components/schemas/EmptyPayload"
+          }
+        },
+        "additionalProperties": false
+      },
+      "RefreshCatalogResponse": {
+        "type": "object",
+        "required": [
+          "type",
+          "rpcId",
+          "result"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "server-response"
+            ]
+          },
+          "rpcId": {
+            "$ref": "#/components/schemas/RpcId"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": [
+                  "ok",
+                  "value"
+                ],
+                "properties": {
+                  "ok": {
+                    "type": "boolean",
+                    "enum": [
+                      true
+                    ]
+                  },
+                  "value": {
+                    "$ref": "#/components/schemas/CatalogView"
+                  }
+                }
+              },
+              {
+                "$ref": "#/components/schemas/ServiceError"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetQuotaRequest": {
+        "type": "object",
+        "required": [
+          "type",
+          "rpcId",
+          "method"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "client-request"
+            ]
+          },
+          "rpcId": {
+            "$ref": "#/components/schemas/RpcId"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "codex-runner/getQuota"
+            ]
+          },
+          "payload": {
+            "$ref": "#/components/schemas/QuotaPayload"
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetQuotaResponse": {
+        "type": "object",
+        "required": [
+          "type",
+          "rpcId",
+          "result"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "server-response"
+            ]
+          },
+          "rpcId": {
+            "$ref": "#/components/schemas/RpcId"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": [
+                  "ok",
+                  "value"
+                ],
+                "properties": {
+                  "ok": {
+                    "type": "boolean",
+                    "enum": [
+                      true
+                    ]
+                  },
+                  "value": {
+                    "$ref": "#/components/schemas/QuotaView"
+                  }
+                }
+              },
+              {
+                "$ref": "#/components/schemas/ServiceError"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetSubagentsRequest": {
+        "type": "object",
+        "required": [
+          "type",
+          "rpcId",
+          "method",
+          "payload"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "client-request"
+            ]
+          },
+          "rpcId": {
+            "$ref": "#/components/schemas/RpcId"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "codex-runner/getSubagents"
+            ]
+          },
+          "payload": {
+            "$ref": "#/components/schemas/SubagentsPayload"
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetSubagentsResponse": {
+        "type": "object",
+        "required": [
+          "type",
+          "rpcId",
+          "result"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "server-response"
+            ]
+          },
+          "rpcId": {
+            "$ref": "#/components/schemas/RpcId"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": [
+                  "ok",
+                  "value"
+                ],
+                "properties": {
+                  "ok": {
+                    "type": "boolean",
+                    "enum": [
+                      true
+                    ]
+                  },
+                  "value": {
+                    "$ref": "#/components/schemas/SubagentsView"
+                  }
+                }
+              },
+              {
+                "$ref": "#/components/schemas/ServiceError"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetEditorRegistryRequest": {
+        "type": "object",
+        "required": [
+          "type",
+          "rpcId",
+          "method"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "client-request"
+            ]
+          },
+          "rpcId": {
+            "$ref": "#/components/schemas/RpcId"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "codex-runner/getEditorRegistry"
+            ]
+          },
+          "payload": {
+            "$ref": "#/components/schemas/RefreshPayload"
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetEditorRegistryResponse": {
+        "type": "object",
+        "required": [
+          "type",
+          "rpcId",
+          "result"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "server-response"
+            ]
+          },
+          "rpcId": {
+            "$ref": "#/components/schemas/RpcId"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": [
+                  "ok",
+                  "value"
+                ],
+                "properties": {
+                  "ok": {
+                    "type": "boolean",
+                    "enum": [
+                      true
+                    ]
+                  },
+                  "value": {
+                    "$ref": "#/components/schemas/RegistryEditorView"
+                  }
+                }
+              },
+              {
+                "$ref": "#/components/schemas/ServiceError"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "SaveEditorRegistryRequest": {
+        "type": "object",
+        "required": [
+          "type",
+          "rpcId",
+          "method",
+          "payload"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "client-request"
+            ]
+          },
+          "rpcId": {
+            "$ref": "#/components/schemas/RpcId"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "codex-runner/saveEditorRegistry"
+            ]
+          },
+          "payload": {
+            "$ref": "#/components/schemas/SaveRegistryPayload"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SaveEditorRegistryResponse": {
+        "type": "object",
+        "required": [
+          "type",
+          "rpcId",
+          "result"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "server-response"
+            ]
+          },
+          "rpcId": {
+            "$ref": "#/components/schemas/RpcId"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": [
+                  "ok",
+                  "value"
+                ],
+                "properties": {
+                  "ok": {
+                    "type": "boolean",
+                    "enum": [
+                      true
+                    ]
+                  },
+                  "value": {
+                    "oneOf": [
+                      {
+                        "$ref": "#/components/schemas/RegistryPreviewView"
+                      },
+                      {
+                        "$ref": "#/components/schemas/RegistryEditorView"
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "$ref": "#/components/schemas/ServiceError"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "responses": {
+      "InvalidRequest": {
+        "description": "插件封装/JSON 校验失败，纯文本，不是 result.error",
+        "content": {
+          "text/plain": {
+            "schema": {
+              "type": "string"
+            },
+            "example": "Invalid request envelope"
+          }
+        }
+      },
+      "RequestTooLarge": {
+        "description": "请求正文超出插件字符串长度上限；也可能先由宿主拒绝",
+        "content": {
+          "text/plain": {
+            "schema": {
+              "type": "string"
+            },
+            "example": "Request too large"
+          }
+        }
+      },
+      "ExpectedJson": {
+        "description": "Content-Type 不是 application/json",
+        "content": {
+          "text/plain": {
+            "schema": {
+              "type": "string"
+            },
+            "example": "Expected JSON"
+          }
+        }
+      },
+      "Unauthenticated": {
+        "description": "未通过 DSH 宿主认证；由宿主返回，正文格式依部署而异"
+      },
+      "Forbidden": {
+        "description": "已连接但不是 owner，DSH Connection 拒绝访问",
+        "content": {
+          "text/plain": {
+            "schema": {
+              "type": "string"
+            },
+            "example": "forbidden"
+          }
+        }
+      },
+      "NotFound": {
+        "description": "插件未启用、接口未注册、缺少宿主服务或 URL/方法不匹配",
+        "content": {
+          "text/plain": {
+            "schema": {
+              "type": "string"
+            },
+            "example": "not found"
+          }
+        }
+      },
+      "HostError": {
+        "description": "宿主、代理或未捕获异常返回的其他响应；具体状态与格式依部署而异"
+      }
+    }
+  },
+  "x-dsh-contract-source": [
+    "lib/runner-service.js",
+    "lib/index.js",
+    "lib/model-catalog.js",
+    "lib/quota-view.js",
+    "lib/configuration-editor.js",
+    "lib/subagent-view.js",
+    "lib/run-events.js"
+  ]
+}

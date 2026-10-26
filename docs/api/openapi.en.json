@@ -1,0 +1,2321 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "dsh-codex-runner Communication API",
+    "version": "0.5.0-rc.2",
+    "description": "Communication between the plugin settings page and the DSH host, suitable for import into Apipost. This specification does not cover the 15 model tools such as codex_run and does not describe an independent HTTP server. The plugin and DSH Connection Fetch must be enabled. All operations require DSH owner access. Replace the example server with the actual DSH Web base URL, including the port and deployment prefix, and configure a valid owner session Cookie. Cookie names depend on the host address; this specification models the complete Cookie header and does not introduce a plugin API key. Do not substitute Codex login credentials for a DSH session. For business errors returned with HTTP 200, inspect result.ok and result.error. All examples are synthetic and contain no real credentials, accounts, or local paths.",
+    "license": {
+      "name": "MIT",
+      "url": "https://github.com/halftin/dsh-codex-runner/blob/main/LICENSE"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost",
+      "description": "Placeholder: replace with the actual DSH Web base URL, including the port and deployment prefix; use https for HTTPS deployments"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Model catalog",
+      "description": "Read and refresh the catalog without starting a model turn"
+    },
+    {
+      "name": "Quota and subagents",
+      "description": "Read account quota and run snapshots"
+    },
+    {
+      "name": "Registry editing",
+      "description": "Field rules, Chinese translations, validation previews, and saves"
+    },
+    {
+      "name": "Run events",
+      "description": "SSE notifications of terminal states"
+    }
+  ],
+  "security": [
+    {
+      "DshOwnerSession": []
+    }
+  ],
+  "paths": {
+    "/api/codex-runner/getCatalog": {
+      "post": {
+        "tags": [
+          "Model catalog"
+        ],
+        "operationId": "getCatalog",
+        "summary": "Read the model catalog and field reference",
+        "description": "Read all models, supported reasoning efforts and service tiers, registry data, and localization metadata. refresh=true requests a new query; an expired cache may also trigger a refresh. This may start a read-only CLI query and update caches, but does not start a model turn. The response is the service catalog structure, which differs from the reduced output of the codex_models tool. Example models illustrate the format and are not evidence of availability for the current account.\n\nHTTP 200 only means the envelope was processed. Check result.ok; business failures appear in result.error and do not automatically become HTTP 400 or 409. Send a client-request envelope, not the payload alone.",
+        "x-dsh-request-max-code-units": 16384,
+        "requestBody": {
+          "required": true,
+          "description": "application/json; the complete body is limited to 16384 JavaScript string code units. An omitted payload defaults to an empty object, but operations that require arguments will still return a business error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetCatalogRequest"
+              },
+              "example": {
+                "type": "client-request",
+                "rpcId": "11111111-1111-4111-8111-111111111111",
+                "method": "codex-runner/getCatalog",
+                "payload": {
+                  "refresh": false
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success or business error; inspect result.ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetCatalogResponse"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "Successful response with illustrative data",
+                    "value": {
+                      "type": "server-response",
+                      "rpcId": "11111111-1111-4111-8111-111111111111",
+                      "result": {
+                        "ok": true,
+                        "value": {
+                          "models": [
+                            {
+                              "id": "gpt-6.1-sol",
+                              "model": "gpt-6.1-sol",
+                              "displayName": "gpt-6.1-sol",
+                              "description": "Example model",
+                              "hidden": false,
+                              "isDefault": true,
+                              "defaultReasoningEffort": "high",
+                              "efforts": [
+                                {
+                                  "id": "high",
+                                  "description": "High effort"
+                                }
+                              ],
+                              "serviceTiers": [],
+                              "inputModalities": [],
+                              "multiAgentVersion": null
+                            }
+                          ],
+                          "source": "fallback",
+                          "fetchedAt": null,
+                          "stale": true,
+                          "cached": false,
+                          "configuration": {
+                            "version": 1,
+                            "codexVersion": null,
+                            "source": "bundled",
+                            "fields": {},
+                            "config": {},
+                            "error": null
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "businessError": {
+                    "summary": "Business errors also use HTTP 200",
+                    "value": {
+                      "type": "server-response",
+                      "rpcId": "11111111-1111-4111-8111-111111111111",
+                      "result": {
+                        "ok": false,
+                        "error": {
+                          "code": "codex-runner/request",
+                          "message": "Invalid read-only service request",
+                          "details": {}
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "413": {
+            "$ref": "#/components/responses/RequestTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/ExpectedJson"
+          },
+          "default": {
+            "$ref": "#/components/responses/HostError"
+          }
+        }
+      }
+    },
+    "/api/codex-runner/refreshCatalog": {
+      "post": {
+        "tags": [
+          "Model catalog"
+        ],
+        "operationId": "refreshCatalog",
+        "summary": "Force a model catalog refresh",
+        "description": "Equivalent to the service call getCatalog({refresh:true}). The payload must be an empty object or omitted. If the native query fails, the operation can still succeed with a fallback catalog containing stale=true and an error. Inspect the value's source and error to assess freshness.\n\nHTTP 200 only means the envelope was processed. Check result.ok; business failures appear in result.error and do not automatically become HTTP 400 or 409. Send a client-request envelope, not the payload alone.",
+        "x-dsh-request-max-code-units": 16384,
+        "requestBody": {
+          "required": true,
+          "description": "application/json; the complete body is limited to 16384 JavaScript string code units. An omitted payload defaults to an empty object, but operations that require arguments will still return a business error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshCatalogRequest"
+              },
+              "example": {
+                "type": "client-request",
+                "rpcId": "11111111-1111-4111-8111-111111111111",
+                "method": "codex-runner/refreshCatalog",
+                "payload": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success or business error; inspect result.ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefreshCatalogResponse"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "Successful response with illustrative data",
+                    "value": {
+                      "type": "server-response",
+                      "rpcId": "11111111-1111-4111-8111-111111111111",
+                      "result": {
+                        "ok": true,
+                        "value": {
+                          "models": [
+                            {
+                              "id": "gpt-6.1-sol",
+                              "model": "gpt-6.1-sol",
+                              "displayName": "gpt-6.1-sol",
+                              "description": "Example model",
+                              "hidden": false,
+                              "isDefault": true,
+                              "defaultReasoningEffort": "high",
+                              "efforts": [
+                                {
+                                  "id": "high",
+                                  "description": "High effort"
+                                }
+                              ],
+                              "serviceTiers": [],
+                              "inputModalities": [],
+                              "multiAgentVersion": null
+                            }
+                          ],
+                          "source": "fallback",
+                          "fetchedAt": null,
+                          "stale": true,
+                          "cached": false,
+                          "configuration": {
+                            "version": 1,
+                            "codexVersion": null,
+                            "source": "bundled",
+                            "fields": {},
+                            "config": {},
+                            "error": null
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "businessError": {
+                    "summary": "Business errors also use HTTP 200",
+                    "value": {
+                      "type": "server-response",
+                      "rpcId": "11111111-1111-4111-8111-111111111111",
+                      "result": {
+                        "ok": false,
+                        "error": {
+                          "code": "codex-runner/request",
+                          "message": "Invalid read-only service request",
+                          "details": {}
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "413": {
+            "$ref": "#/components/responses/RequestTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/ExpectedJson"
+          },
+          "default": {
+            "$ref": "#/components/responses/HostError"
+          }
+        }
+      }
+    },
+    "/api/codex-runner/getQuota": {
+      "post": {
+        "tags": [
+          "Quota and subagents"
+        ],
+        "operationId": "getQuota",
+        "summary": "Read account-wide quota and recovery state",
+        "description": "Return account-wide five-hour and seven-day quota windows, sample time, warning, probe, and recovery state. Quota is not allocated per workspace. fresh only queries the account API and does not start a model turn; refresh cannot bypass its three-minute rate limit. active reads active-run snapshots without sending messages. When no data is available, status=unknown; failed queries may retain older data.\n\nHTTP 200 only means the envelope was processed. Check result.ok; business failures appear in result.error and do not automatically become HTTP 400 or 409. Send a client-request envelope, not the payload alone.",
+        "x-dsh-request-max-code-units": 16384,
+        "requestBody": {
+          "required": true,
+          "description": "application/json; the complete body is limited to 16384 JavaScript string code units. An omitted payload defaults to an empty object, but operations that require arguments will still return a business error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetQuotaRequest"
+              },
+              "example": {
+                "type": "client-request",
+                "rpcId": "11111111-1111-4111-8111-111111111111",
+                "method": "codex-runner/getQuota",
+                "payload": {
+                  "probe": "none",
+                  "timeoutMs": 15000,
+                  "refresh": false
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success or business error; inspect result.ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetQuotaResponse"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "Successful response with illustrative data",
+                    "value": {
+                      "type": "server-response",
+                      "rpcId": "11111111-1111-4111-8111-111111111111",
+                      "result": {
+                        "ok": true,
+                        "value": {
+                          "status": "unknown",
+                          "scope": "account-wide",
+                          "account": {
+                            "plan": null,
+                            "fingerprint_prefix": null
+                          },
+                          "windows": {
+                            "five_hour": null,
+                            "seven_day": null
+                          },
+                          "warning": {
+                            "enabled": false,
+                            "threshold": 5,
+                            "triggered": false
+                          },
+                          "recovery": null,
+                          "source": "none",
+                          "source_detail": null,
+                          "sampled_at": null,
+                          "cached": false,
+                          "stale": false,
+                          "probe": {
+                            "fresh": null,
+                            "active": null
+                          },
+                          "transport": "unknown",
+                          "error": null,
+                          "refresh_limited": false,
+                          "next_probe_at": null
+                        }
+                      }
+                    }
+                  },
+                  "businessError": {
+                    "summary": "Business errors also use HTTP 200",
+                    "value": {
+                      "type": "server-response",
+                      "rpcId": "11111111-1111-4111-8111-111111111111",
+                      "result": {
+                        "ok": false,
+                        "error": {
+                          "code": "codex-runner/request",
+                          "message": "Invalid read-only service request",
+                          "details": {}
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "413": {
+            "$ref": "#/components/responses/RequestTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/ExpectedJson"
+          },
+          "default": {
+            "$ref": "#/components/responses/HostError"
+          }
+        }
+      }
+    },
+    "/api/codex-runner/getSubagents": {
+      "post": {
+        "tags": [
+          "Quota and subagents"
+        ],
+        "operationId": "getSubagents",
+        "summary": "Read native subagent summaries for a run",
+        "description": "Read up to 32 saved subagent entries for a run in a workspace known to the plugin. If run ownership, records, or metadata are unavailable, the result has ok=true and value=null. This operation does not start subagents, read complete child messages, or cancel processes.\n\nHTTP 200 only means the envelope was processed. Check result.ok; business failures appear in result.error and do not automatically become HTTP 400 or 409. Send a client-request envelope, not the payload alone.",
+        "x-dsh-request-max-code-units": 16384,
+        "requestBody": {
+          "required": true,
+          "description": "application/json; the complete body is limited to 16384 JavaScript string code units. An omitted payload defaults to an empty object, but operations that require arguments will still return a business error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetSubagentsRequest"
+              },
+              "example": {
+                "type": "client-request",
+                "rpcId": "11111111-1111-4111-8111-111111111111",
+                "method": "codex-runner/getSubagents",
+                "payload": {
+                  "runId": "11111111-1111-4111-8111-111111111111"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success or business error; inspect result.ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetSubagentsResponse"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "Successful response with illustrative data",
+                    "value": {
+                      "type": "server-response",
+                      "rpcId": "11111111-1111-4111-8111-111111111111",
+                      "result": {
+                        "ok": true,
+                        "value": null
+                      }
+                    }
+                  },
+                  "businessError": {
+                    "summary": "Business errors also use HTTP 200",
+                    "value": {
+                      "type": "server-response",
+                      "rpcId": "11111111-1111-4111-8111-111111111111",
+                      "result": {
+                        "ok": false,
+                        "error": {
+                          "code": "codex-runner/request",
+                          "message": "Invalid read-only service request",
+                          "details": {}
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "413": {
+            "$ref": "#/components/responses/RequestTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/ExpectedJson"
+          },
+          "default": {
+            "$ref": "#/components/responses/HostError"
+          }
+        }
+      }
+    },
+    "/api/codex-runner/getEditorRegistry": {
+      "post": {
+        "tags": [
+          "Registry editing"
+        ],
+        "operationId": "getEditorRegistry",
+        "summary": "Read the registry editor document and revision",
+        "description": "Read merged field rules, Chinese translations, generated metadata, the revision, and setting definitions. Configuration values remain managed by DSH configForms. refresh=true rediscovers fields and updates reference caches; it is not merely a refresh of an in-memory draft. When readOnly=true, revision=null and saving is unavailable. The response example omits fields and uses a placeholder revision; never use it to replace the actual document.\n\nHTTP 200 only means the envelope was processed. Check result.ok; business failures appear in result.error and do not automatically become HTTP 400 or 409. Send a client-request envelope, not the payload alone.",
+        "x-dsh-request-max-code-units": 16384,
+        "requestBody": {
+          "required": true,
+          "description": "application/json; the complete body is limited to 16384 JavaScript string code units. An omitted payload defaults to an empty object, but operations that require arguments will still return a business error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetEditorRegistryRequest"
+              },
+              "example": {
+                "type": "client-request",
+                "rpcId": "11111111-1111-4111-8111-111111111111",
+                "method": "codex-runner/getEditorRegistry",
+                "payload": {
+                  "refresh": false
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success or business error; inspect result.ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetEditorRegistryResponse"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "Successful response with illustrative data",
+                    "value": {
+                      "type": "server-response",
+                      "rpcId": "11111111-1111-4111-8111-111111111111",
+                      "result": {
+                        "ok": true,
+                        "value": {
+                          "document": {
+                            "version": 1,
+                            "codexVersion": null,
+                            "updatedAt": null,
+                            "fields": {},
+                            "translations": {
+                              "version": 1,
+                              "locale": "zh-CN",
+                              "models": {},
+                              "efforts": {},
+                              "tiers": {},
+                              "settings": {},
+                              "meta": {}
+                            }
+                          },
+                          "revision": "0000000000000000000000000000000000000000000000000000000000000000",
+                          "readOnly": false,
+                          "definitions": {},
+                          "configuration": {
+                            "version": 1,
+                            "codexVersion": null,
+                            "source": "bundled",
+                            "fields": {},
+                            "config": {},
+                            "error": null
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "businessError": {
+                    "summary": "Business errors also use HTTP 200",
+                    "value": {
+                      "type": "server-response",
+                      "rpcId": "11111111-1111-4111-8111-111111111111",
+                      "result": {
+                        "ok": false,
+                        "error": {
+                          "code": "codex-runner/request",
+                          "message": "Invalid read-only service request",
+                          "details": {}
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "413": {
+            "$ref": "#/components/responses/RequestTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/ExpectedJson"
+          },
+          "default": {
+            "$ref": "#/components/responses/HostError"
+          }
+        }
+      }
+    },
+    "/api/codex-runner/saveEditorRegistry": {
+      "post": {
+        "tags": [
+          "Registry editing"
+        ],
+        "operationId": "saveEditorRegistry",
+        "summary": "Preview or save field rules and Chinese translations",
+        "description": "Call getEditorRegistry first, copy its complete document and revision, then edit the required fields. The example only illustrates the structure: the all-zero revision and empty fields are placeholders and cannot be used directly for saving. The example uses preview=true for validation only; preview=false writes field overrides and user Chinese translations to fixed locations, without saving current profile settings. Preserve codexVersion and updatedAt unchanged. Omitted bundled fields are treated as disabled; reread the document if the revision is stale. The implementation attempts rollback if writing the rule or translation files fails. Preview returns configuration and definitions; saving returns a new complete editor view. This operation does not call a translation model.\n\nHTTP 200 only means the envelope was processed. Check result.ok; business failures appear in result.error and do not automatically become HTTP 400 or 409. Send a client-request envelope, not the payload alone.",
+        "x-dsh-request-max-code-units": 1048576,
+        "requestBody": {
+          "required": true,
+          "description": "application/json; the complete body is limited to 1048576 JavaScript string code units. The serialized document is separately limited to 1 MiB of UTF-8 bytes. The host may impose additional request body limits",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveEditorRegistryRequest"
+              },
+              "example": {
+                "type": "client-request",
+                "rpcId": "11111111-1111-4111-8111-111111111111",
+                "method": "codex-runner/saveEditorRegistry",
+                "payload": {
+                  "document": {
+                    "version": 1,
+                    "codexVersion": null,
+                    "updatedAt": null,
+                    "fields": {},
+                    "translations": {
+                      "version": 1,
+                      "locale": "zh-CN",
+                      "models": {},
+                      "efforts": {},
+                      "tiers": {},
+                      "settings": {},
+                      "meta": {}
+                    }
+                  },
+                  "revision": "0000000000000000000000000000000000000000000000000000000000000000",
+                  "preview": true
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success or business error; inspect result.ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaveEditorRegistryResponse"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "Successful validation preview",
+                    "value": {
+                      "type": "server-response",
+                      "rpcId": "11111111-1111-4111-8111-111111111111",
+                      "result": {
+                        "ok": true,
+                        "value": {
+                          "configuration": {
+                            "version": 1,
+                            "codexVersion": null,
+                            "source": "bundled",
+                            "fields": {},
+                            "config": {},
+                            "error": null
+                          },
+                          "definitions": {}
+                        }
+                      }
+                    }
+                  },
+                  "businessError": {
+                    "summary": "Business errors also use HTTP 200",
+                    "value": {
+                      "type": "server-response",
+                      "rpcId": "11111111-1111-4111-8111-111111111111",
+                      "result": {
+                        "ok": false,
+                        "error": {
+                          "code": "codex-runner/request",
+                          "message": "Registry changed on disk. Reopen the editor before saving.",
+                          "details": {}
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "413": {
+            "$ref": "#/components/responses/RequestTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/ExpectedJson"
+          },
+          "default": {
+            "$ref": "#/components/responses/HostError"
+          }
+        }
+      }
+    },
+    "/api/codex-runner/run-events": {
+      "get": {
+        "tags": [
+          "Run events"
+        ],
+        "operationId": "runEvents",
+        "summary": "Subscribe to run terminal events (SSE)",
+        "description": "Requires host connection, webServer, rpc.handle, and runEventStream support; the route is not registered if these are unavailable. The connection first receives a comment, then terminal-state invalidation notifications as data: JSON frames. This is not full progress output or a model token stream and does not use a server-response envelope. Each run emits one terminal event. There is no history replay or guaranteed Last-Event-ID recovery. The connection may remain open without any data frames; use a streaming client, since ordinary HTTP tests may time out. Only runs registered in the current process are observed; this operation does not start tasks",
+        "responses": {
+          "200": {
+            "description": "Continuous Server-Sent Events; each data frame ends with two newline characters",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": ": codex-runner read-only run invalidation\n\ndata: {\"run_id\":\"11111111-1111-4111-8111-111111111111\",\"status\":\"completed\"}\n\n"
+              }
+            },
+            "x-dsh-event-data": {
+              "$ref": "#/components/schemas/RunEvent"
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "default": {
+            "$ref": "#/components/responses/HostError"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "DshOwnerSession": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Cookie",
+        "description": "Provide the complete Cookie header value of an authenticated DSH owner session (name=value; ...). Names depend on the host address and must not be hardcoded. This only models HTTP session transport; DSH Connection performs signature verification and owner authorization. Configure the value in a private Apipost environment, not in shared documentation"
+      }
+    },
+    "schemas": {
+      "RpcId": {
+        "type": "string",
+        "description": "Lowercase UUID v4; rpcId correlates requests and is echoed unchanged in responses. runId uses the same format",
+        "format": "uuid",
+        "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$",
+        "example": "11111111-1111-4111-8111-111111111111"
+      },
+      "ServiceError": {
+        "type": "object",
+        "required": [
+          "ok",
+          "error"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          },
+          "error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message",
+              "details"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "codex-runner/request"
+                ]
+              },
+              "message": {
+                "type": "string",
+                "description": "Reason for a validation, read, or save failure"
+              },
+              "details": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      },
+      "RefreshPayload": {
+        "type": "object",
+        "properties": {
+          "refresh": {
+            "type": "boolean",
+            "description": "Request rediscovery or refresh; may update local reference caches without starting a model turn",
+            "default": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "EmptyPayload": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "QuotaPayload": {
+        "type": "object",
+        "properties": {
+          "probe": {
+            "type": "string",
+            "description": "none reads existing data; fresh queries the account; active reads active-run snapshots; both combines the latter two without sending steer messages",
+            "enum": [
+              "none",
+              "fresh",
+              "active",
+              "both"
+            ],
+            "default": "none"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "description": "Native query timeout in milliseconds",
+            "minimum": 1,
+            "maximum": 60000,
+            "default": 15000
+          },
+          "refresh": {
+            "type": "boolean",
+            "description": "Refresh flag; does not bypass the three-minute rate limit for fresh probes",
+            "default": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "SubagentsPayload": {
+        "type": "object",
+        "required": [
+          "runId"
+        ],
+        "properties": {
+          "runId": {
+            "$ref": "#/components/schemas/RpcId"
+          }
+        },
+        "additionalProperties": false
+      },
+      "NativeJsonSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "description": "Codex JSON Schema carried as data, not an OpenAPI Schema Object; may contain native extensions and recursive definitions"
+      },
+      "FieldRule": {
+        "type": "object",
+        "properties": {
+          "allow": {
+            "type": "boolean",
+            "description": "Allow generic configuration passthrough"
+          },
+          "used": {
+            "type": "boolean",
+            "description": "Field used by plugin-specific controls"
+          },
+          "profile": {
+            "type": "boolean",
+            "description": "Declaration for a built-in control"
+          },
+          "aliasOf": {
+            "type": "string",
+            "description": "Target field key; must satisfy native safe-key rules"
+          },
+          "schema": {
+            "$ref": "#/components/schemas/NativeJsonSchema"
+          },
+          "fallbackSchema": {
+            "$ref": "#/components/schemas/NativeJsonSchema"
+          },
+          "name": {
+            "type": "string",
+            "description": "Field name",
+            "maxLength": 4000
+          },
+          "description": {
+            "type": "string",
+            "description": "Field description",
+            "maxLength": 4000
+          },
+          "deprecated": {
+            "type": "boolean",
+            "description": "Deprecation flag"
+          },
+          "minVersion": {
+            "type": "string",
+            "description": "Minimum Codex version, inclusive"
+          },
+          "maxVersion": {
+            "type": "string",
+            "description": "Maximum Codex version, inclusive"
+          },
+          "excludedValues": {
+            "type": "array",
+            "maxItems": 200,
+            "items": {
+              "type": "string"
+            },
+            "description": "String values excluded from the native enum"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Compatibility rule keyed by a validated Codex field name; aliases cannot bypass permission controls"
+      },
+      "TranslationText": {
+        "type": "string",
+        "description": "Single-line plain text of at most 200 characters; no angle brackets, control characters, or line breaks",
+        "maxLength": 200,
+        "pattern": "^[^<>\\r\\n\\u0000-\\u001f\\u007f\\u2028\\u2029]*$"
+      },
+      "DescriptionTranslation": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "$ref": "#/components/schemas/TranslationText"
+          },
+          "_source": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Source metadata accepted for compatibility; not regenerated by manual saves"
+          }
+        },
+        "additionalProperties": false
+      },
+      "NamedTranslation": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "$ref": "#/components/schemas/TranslationText"
+          },
+          "description": {
+            "$ref": "#/components/schemas/TranslationText"
+          },
+          "_source": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Source metadata accepted for compatibility"
+          }
+        },
+        "additionalProperties": false
+      },
+      "Translations": {
+        "type": "object",
+        "required": [
+          "version",
+          "locale"
+        ],
+        "properties": {
+          "version": {
+            "type": "integer",
+            "enum": [
+              1
+            ]
+          },
+          "locale": {
+            "type": "string",
+            "enum": [
+              "zh-CN"
+            ]
+          },
+          "models": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/DescriptionTranslation"
+            }
+          },
+          "efforts": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/DescriptionTranslation"
+            }
+          },
+          "tiers": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/NamedTranslation"
+            }
+          },
+          "settings": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/NamedTranslation"
+            }
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true,
+        "description": "User Chinese translations; blank values inherit bundled text. Native IDs are preserved and no translation model is called automatically"
+      },
+      "RegistryDocument": {
+        "type": "object",
+        "required": [
+          "version",
+          "codexVersion",
+          "updatedAt",
+          "fields",
+          "translations"
+        ],
+        "properties": {
+          "version": {
+            "type": "integer",
+            "enum": [
+              1
+            ]
+          },
+          "codexVersion": {
+            "type": "string",
+            "description": "System-generated; preserve the original value returned by getEditorRegistry when saving",
+            "nullable": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "System-generated time of the last successful refresh; preserve the original value when saving",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "fields": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/FieldRule"
+            },
+            "description": "Complete merged field rules; do not replace the fetched result with an empty object"
+          },
+          "translations": {
+            "$ref": "#/components/schemas/Translations"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Read the current document first, edit only the required fields, and preserve all other content. Omitting a bundled field is treated as disabling it"
+      },
+      "SaveRegistryPayload": {
+        "type": "object",
+        "required": [
+          "document",
+          "revision"
+        ],
+        "properties": {
+          "document": {
+            "$ref": "#/components/schemas/RegistryDocument"
+          },
+          "revision": {
+            "type": "string",
+            "description": "Use the revision SHA-256 returned by the latest getEditorRegistry call; stale revisions return a business error",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "preview": {
+            "type": "boolean",
+            "description": "true validates only and does not write user rule or translation files; false commits the save",
+            "default": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "FieldRegistry": {
+        "type": "object",
+        "required": [
+          "version",
+          "fields",
+          "config"
+        ],
+        "properties": {
+          "version": {
+            "type": "integer",
+            "enum": [
+              1
+            ]
+          },
+          "codexVersion": {
+            "type": "string",
+            "description": "Local Codex version",
+            "nullable": true
+          },
+          "source": {
+            "type": "string",
+            "description": "Registry source, such as bundled, cache, or installed-protocol"
+          },
+          "referenceSource": {
+            "type": "string",
+            "description": "Source of reference definitions"
+          },
+          "referenceVersion": {
+            "type": "string",
+            "description": "Reference snapshot version",
+            "nullable": true
+          },
+          "referenceMatched": {
+            "type": "boolean"
+          },
+          "referenceFieldCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "localFieldCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "protocolSchemaCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "fields": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "description": "Compiled field definitions, including dynamic schemas and compatibility metadata"
+          },
+          "config": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "Fields allowed for generic passthrough and their compiled configuration; values vary with the native version"
+          },
+          "error": {
+            "type": "string",
+            "description": "Discovery or read diagnostic",
+            "nullable": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "Last successful update time",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "stale": {
+            "type": "boolean",
+            "description": "Whether the cache is stale"
+          },
+          "fallback": {
+            "type": "boolean"
+          },
+          "fallbackFile": {
+            "type": "string",
+            "description": "Relative path to the bundled fallback file"
+          },
+          "paths": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "nullable": true
+            },
+            "description": "Local file locations returned by the host; may contain machine-specific paths and should not be copied unchanged into public examples"
+          }
+        },
+        "additionalProperties": true,
+        "description": "Native fields and discovery metadata vary with the CLI version; additional fields are preserved"
+      },
+      "SettingDefinition": {
+        "type": "object",
+        "required": [
+          "source",
+          "nativeKey",
+          "schema",
+          "defaultValue"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "codex",
+              "plugin"
+            ]
+          },
+          "nativeKey": {
+            "type": "string",
+            "description": "Corresponding native key; null for plugin-owned settings",
+            "nullable": true
+          },
+          "schema": {
+            "$ref": "#/components/schemas/NativeJsonSchema"
+          },
+          "defaultValue": {
+            "description": "Default JSON value of the setting, which may be null"
+          }
+        },
+        "additionalProperties": true
+      },
+      "RegistryEditorView": {
+        "type": "object",
+        "required": [
+          "document",
+          "revision",
+          "readOnly",
+          "definitions",
+          "configuration"
+        ],
+        "properties": {
+          "document": {
+            "$ref": "#/components/schemas/RegistryDocument"
+          },
+          "revision": {
+            "type": "string",
+            "description": "Revision SHA-256 when editable; null when read-only",
+            "nullable": true,
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "readOnly": {
+            "type": "boolean",
+            "description": "true when user files are corrupt or unreadable"
+          },
+          "definitions": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SettingDefinition"
+            },
+            "description": "Current plugin configuration field definitions, excluding actual setting values in the current profile"
+          },
+          "configuration": {
+            "$ref": "#/components/schemas/FieldRegistry"
+          }
+        },
+        "additionalProperties": true
+      },
+      "RegistryPreviewView": {
+        "type": "object",
+        "required": [
+          "configuration",
+          "definitions"
+        ],
+        "properties": {
+          "configuration": {
+            "$ref": "#/components/schemas/FieldRegistry"
+          },
+          "definitions": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SettingDefinition"
+            }
+          }
+        },
+        "additionalProperties": false,
+        "description": "Response for preview=true; does not contain a new document, revision, or readOnly flag"
+      },
+      "Effort": {
+        "type": "object",
+        "required": [
+          "id",
+          "description"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Native reasoning-effort identifier"
+          },
+          "description": {
+            "type": "string",
+            "description": "Native description"
+          },
+          "localized": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true
+      },
+      "ServiceTier": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Native service-tier identifier"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "localized": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true
+      },
+      "Model": {
+        "type": "object",
+        "required": [
+          "id",
+          "model",
+          "displayName",
+          "description",
+          "hidden",
+          "isDefault",
+          "defaultReasoningEffort",
+          "efforts",
+          "serviceTiers"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Model ID"
+          },
+          "model": {
+            "type": "string",
+            "description": "Equal to id after normalization"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "hidden": {
+            "type": "boolean"
+          },
+          "isDefault": {
+            "type": "boolean"
+          },
+          "defaultReasoningEffort": {
+            "type": "string"
+          },
+          "efforts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Effort"
+            }
+          },
+          "serviceTiers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ServiceTier"
+            }
+          },
+          "inputModalities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "multiAgentVersion": {
+            "description": "Native subagent capability version; null when not provided"
+          },
+          "localized": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true
+      },
+      "CatalogView": {
+        "type": "object",
+        "required": [
+          "models",
+          "source",
+          "fetchedAt",
+          "stale",
+          "configuration"
+        ],
+        "properties": {
+          "models": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Model"
+            }
+          },
+          "source": {
+            "type": "string",
+            "description": "app-server, fallback, or the source retained in the cache"
+          },
+          "fetchedAt": {
+            "type": "string",
+            "description": "Catalog sample time",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "stale": {
+            "type": "boolean"
+          },
+          "cached": {
+            "type": "boolean"
+          },
+          "error": {
+            "type": "string",
+            "description": "Refresh failure diagnostic; usually omitted on success"
+          },
+          "configuration": {
+            "$ref": "#/components/schemas/FieldRegistry"
+          },
+          "settings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "description": "Localized registry setting descriptions, not current profile configuration"
+          },
+          "accountFingerprint": {
+            "type": "string",
+            "description": "Account fingerprint; not a login credential",
+            "nullable": true
+          },
+          "cacheKey": {
+            "type": "string"
+          },
+          "cacheError": {
+            "type": "string"
+          },
+          "i18n_error": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      },
+      "QuotaWindow": {
+        "type": "object",
+        "required": [
+          "used_percent",
+          "remaining_percent",
+          "resets_at",
+          "reset_in_sec"
+        ],
+        "properties": {
+          "used_percent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "remaining_percent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "resets_at": {
+            "type": "string",
+            "description": "Quota reset time; null when unknown",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "reset_in_sec": {
+            "type": "integer",
+            "minimum": 0,
+            "nullable": true,
+            "description": "Seconds until reset, relative to this response"
+          }
+        },
+        "nullable": true,
+        "additionalProperties": true
+      },
+      "QuotaProbe": {
+        "type": "object",
+        "required": [
+          "ok",
+          "latency_ms",
+          "error"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "latency_ms": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "error": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "nullable": true,
+        "additionalProperties": true
+      },
+      "RecoveryState": {
+        "type": "object",
+        "nullable": true,
+        "additionalProperties": true,
+        "description": "Recovery state for the original run. May include phase, run_id, generation, resume_at, schedule_id, resumed_run_id, error, and retention_warning; null when no record exists"
+      },
+      "QuotaView": {
+        "type": "object",
+        "required": [
+          "status",
+          "scope",
+          "account",
+          "windows",
+          "warning",
+          "recovery",
+          "source",
+          "source_detail",
+          "sampled_at",
+          "cached",
+          "stale",
+          "probe",
+          "transport",
+          "error",
+          "refresh_limited",
+          "next_probe_at"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "stale",
+              "unknown",
+              "unavailable"
+            ]
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "account-wide"
+            ]
+          },
+          "account": {
+            "type": "object",
+            "required": [
+              "plan",
+              "fingerprint_prefix"
+            ],
+            "properties": {
+              "plan": {
+                "type": "string",
+                "description": "Account plan",
+                "nullable": true
+              },
+              "fingerprint_prefix": {
+                "type": "string",
+                "description": "Account fingerprint prefix",
+                "nullable": true
+              }
+            }
+          },
+          "windows": {
+            "type": "object",
+            "required": [
+              "five_hour",
+              "seven_day"
+            ],
+            "properties": {
+              "five_hour": {
+                "$ref": "#/components/schemas/QuotaWindow"
+              },
+              "seven_day": {
+                "$ref": "#/components/schemas/QuotaWindow"
+              }
+            }
+          },
+          "warning": {
+            "type": "object",
+            "required": [
+              "enabled",
+              "threshold",
+              "triggered"
+            ],
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "threshold": {
+                "type": "number"
+              },
+              "triggered": {
+                "type": "boolean"
+              }
+            }
+          },
+          "recovery": {
+            "$ref": "#/components/schemas/RecoveryState"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "app-server",
+              "last-run",
+              "none"
+            ]
+          },
+          "source_detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "sampled_at": {
+            "type": "string",
+            "description": "Data sample time",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "cached": {
+            "type": "boolean"
+          },
+          "stale": {
+            "type": "boolean"
+          },
+          "probe": {
+            "type": "object",
+            "required": [
+              "fresh",
+              "active"
+            ],
+            "properties": {
+              "fresh": {
+                "$ref": "#/components/schemas/QuotaProbe"
+              },
+              "active": {
+                "$ref": "#/components/schemas/QuotaProbe"
+              }
+            }
+          },
+          "transport": {
+            "type": "string",
+            "enum": [
+              "not-probed",
+              "reachable",
+              "unreachable",
+              "unknown"
+            ]
+          },
+          "error": {
+            "type": "string",
+            "nullable": true
+          },
+          "refresh_limited": {
+            "type": "boolean"
+          },
+          "next_probe_at": {
+            "type": "string",
+            "description": "Next time a fresh probe is permitted",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": true
+      },
+      "SubagentItem": {
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "tool",
+          "updated_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "running",
+              "completed",
+              "failed",
+              "unknown"
+            ]
+          },
+          "tool": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "updated_at": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          }
+        }
+      },
+      "SubagentsView": {
+        "type": "object",
+        "required": [
+          "count",
+          "running",
+          "completed",
+          "failed",
+          "unknown",
+          "truncated",
+          "items"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "running": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "completed": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "failed": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "unknown": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "items": {
+            "type": "array",
+            "maxItems": 32,
+            "items": {
+              "$ref": "#/components/schemas/SubagentItem"
+            }
+          }
+        },
+        "nullable": true,
+        "additionalProperties": false,
+        "description": "The value is null when run ownership, records, or metadata cannot be found"
+      },
+      "RunEvent": {
+        "type": "object",
+        "required": [
+          "run_id",
+          "status"
+        ],
+        "properties": {
+          "run_id": {
+            "$ref": "#/components/schemas/RpcId"
+          },
+          "status": {
+            "type": "string",
+            "description": "Terminal status of this run, such as completed, failed, or cancelled"
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetCatalogRequest": {
+        "type": "object",
+        "required": [
+          "type",
+          "rpcId",
+          "method"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "client-request"
+            ]
+          },
+          "rpcId": {
+            "$ref": "#/components/schemas/RpcId"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "codex-runner/getCatalog"
+            ]
+          },
+          "payload": {
+            "$ref": "#/components/schemas/RefreshPayload"
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetCatalogResponse": {
+        "type": "object",
+        "required": [
+          "type",
+          "rpcId",
+          "result"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "server-response"
+            ]
+          },
+          "rpcId": {
+            "$ref": "#/components/schemas/RpcId"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": [
+                  "ok",
+                  "value"
+                ],
+                "properties": {
+                  "ok": {
+                    "type": "boolean",
+                    "enum": [
+                      true
+                    ]
+                  },
+                  "value": {
+                    "$ref": "#/components/schemas/CatalogView"
+                  }
+                }
+              },
+              {
+                "$ref": "#/components/schemas/ServiceError"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "RefreshCatalogRequest": {
+        "type": "object",
+        "required": [
+          "type",
+          "rpcId",
+          "method"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "client-request"
+            ]
+          },
+          "rpcId": {
+            "$ref": "#/components/schemas/RpcId"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "codex-runner/refreshCatalog"
+            ]
+          },
+          "payload": {
+            "$ref": "#/components/schemas/EmptyPayload"
+          }
+        },
+        "additionalProperties": false
+      },
+      "RefreshCatalogResponse": {
+        "type": "object",
+        "required": [
+          "type",
+          "rpcId",
+          "result"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "server-response"
+            ]
+          },
+          "rpcId": {
+            "$ref": "#/components/schemas/RpcId"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": [
+                  "ok",
+                  "value"
+                ],
+                "properties": {
+                  "ok": {
+                    "type": "boolean",
+                    "enum": [
+                      true
+                    ]
+                  },
+                  "value": {
+                    "$ref": "#/components/schemas/CatalogView"
+                  }
+                }
+              },
+              {
+                "$ref": "#/components/schemas/ServiceError"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetQuotaRequest": {
+        "type": "object",
+        "required": [
+          "type",
+          "rpcId",
+          "method"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "client-request"
+            ]
+          },
+          "rpcId": {
+            "$ref": "#/components/schemas/RpcId"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "codex-runner/getQuota"
+            ]
+          },
+          "payload": {
+            "$ref": "#/components/schemas/QuotaPayload"
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetQuotaResponse": {
+        "type": "object",
+        "required": [
+          "type",
+          "rpcId",
+          "result"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "server-response"
+            ]
+          },
+          "rpcId": {
+            "$ref": "#/components/schemas/RpcId"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": [
+                  "ok",
+                  "value"
+                ],
+                "properties": {
+                  "ok": {
+                    "type": "boolean",
+                    "enum": [
+                      true
+                    ]
+                  },
+                  "value": {
+                    "$ref": "#/components/schemas/QuotaView"
+                  }
+                }
+              },
+              {
+                "$ref": "#/components/schemas/ServiceError"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetSubagentsRequest": {
+        "type": "object",
+        "required": [
+          "type",
+          "rpcId",
+          "method",
+          "payload"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "client-request"
+            ]
+          },
+          "rpcId": {
+            "$ref": "#/components/schemas/RpcId"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "codex-runner/getSubagents"
+            ]
+          },
+          "payload": {
+            "$ref": "#/components/schemas/SubagentsPayload"
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetSubagentsResponse": {
+        "type": "object",
+        "required": [
+          "type",
+          "rpcId",
+          "result"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "server-response"
+            ]
+          },
+          "rpcId": {
+            "$ref": "#/components/schemas/RpcId"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": [
+                  "ok",
+                  "value"
+                ],
+                "properties": {
+                  "ok": {
+                    "type": "boolean",
+                    "enum": [
+                      true
+                    ]
+                  },
+                  "value": {
+                    "$ref": "#/components/schemas/SubagentsView"
+                  }
+                }
+              },
+              {
+                "$ref": "#/components/schemas/ServiceError"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetEditorRegistryRequest": {
+        "type": "object",
+        "required": [
+          "type",
+          "rpcId",
+          "method"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "client-request"
+            ]
+          },
+          "rpcId": {
+            "$ref": "#/components/schemas/RpcId"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "codex-runner/getEditorRegistry"
+            ]
+          },
+          "payload": {
+            "$ref": "#/components/schemas/RefreshPayload"
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetEditorRegistryResponse": {
+        "type": "object",
+        "required": [
+          "type",
+          "rpcId",
+          "result"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "server-response"
+            ]
+          },
+          "rpcId": {
+            "$ref": "#/components/schemas/RpcId"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": [
+                  "ok",
+                  "value"
+                ],
+                "properties": {
+                  "ok": {
+                    "type": "boolean",
+                    "enum": [
+                      true
+                    ]
+                  },
+                  "value": {
+                    "$ref": "#/components/schemas/RegistryEditorView"
+                  }
+                }
+              },
+              {
+                "$ref": "#/components/schemas/ServiceError"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "SaveEditorRegistryRequest": {
+        "type": "object",
+        "required": [
+          "type",
+          "rpcId",
+          "method",
+          "payload"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "client-request"
+            ]
+          },
+          "rpcId": {
+            "$ref": "#/components/schemas/RpcId"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "codex-runner/saveEditorRegistry"
+            ]
+          },
+          "payload": {
+            "$ref": "#/components/schemas/SaveRegistryPayload"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SaveEditorRegistryResponse": {
+        "type": "object",
+        "required": [
+          "type",
+          "rpcId",
+          "result"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "server-response"
+            ]
+          },
+          "rpcId": {
+            "$ref": "#/components/schemas/RpcId"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": [
+                  "ok",
+                  "value"
+                ],
+                "properties": {
+                  "ok": {
+                    "type": "boolean",
+                    "enum": [
+                      true
+                    ]
+                  },
+                  "value": {
+                    "oneOf": [
+                      {
+                        "$ref": "#/components/schemas/RegistryPreviewView"
+                      },
+                      {
+                        "$ref": "#/components/schemas/RegistryEditorView"
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "$ref": "#/components/schemas/ServiceError"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "responses": {
+      "InvalidRequest": {
+        "description": "Plugin envelope or JSON validation failed; plain text rather than result.error",
+        "content": {
+          "text/plain": {
+            "schema": {
+              "type": "string"
+            },
+            "example": "Invalid request envelope"
+          }
+        }
+      },
+      "RequestTooLarge": {
+        "description": "The request body exceeds the plugin's string-length limit; the host may reject it earlier",
+        "content": {
+          "text/plain": {
+            "schema": {
+              "type": "string"
+            },
+            "example": "Request too large"
+          }
+        }
+      },
+      "ExpectedJson": {
+        "description": "Content-Type is not application/json",
+        "content": {
+          "text/plain": {
+            "schema": {
+              "type": "string"
+            },
+            "example": "Expected JSON"
+          }
+        }
+      },
+      "Unauthenticated": {
+        "description": "DSH host authentication failed; returned by the host, with a deployment-dependent body format"
+      },
+      "Forbidden": {
+        "description": "The connected peer is not an owner; DSH Connection denies access",
+        "content": {
+          "text/plain": {
+            "schema": {
+              "type": "string"
+            },
+            "example": "forbidden"
+          }
+        }
+      },
+      "NotFound": {
+        "description": "The plugin is disabled, the route is unregistered, a host service is missing, or the URL or HTTP method does not match",
+        "content": {
+          "text/plain": {
+            "schema": {
+              "type": "string"
+            },
+            "example": "not found"
+          }
+        }
+      },
+      "HostError": {
+        "description": "Other responses from the host, a proxy, or an uncaught exception; status and format depend on the deployment"
+      }
+    }
+  },
+  "x-dsh-contract-source": [
+    "lib/runner-service.js",
+    "lib/index.js",
+    "lib/model-catalog.js",
+    "lib/quota-view.js",
+    "lib/configuration-editor.js",
+    "lib/subagent-view.js",
+    "lib/run-events.js"
+  ]
+}
