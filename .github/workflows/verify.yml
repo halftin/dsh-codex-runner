@@ -5,7 +5,13 @@ permissions:
 jobs:
   windows:
     runs-on: windows-latest
+    # Windows runner TEMP can use an 8.3 alias. Keep fixtures on the long path:
+    # libuv watchers and path-sensitive fault injection must see the same name.
+    env:
+      TEMP: ${{ runner.temp }}
+      TMP: ${{ runner.temp }}
     strategy:
+      fail-fast: false
       matrix:
         node: ['22.23.4', '24.19.0']
     steps:
