@@ -4,6 +4,14 @@
 
 ## Settings
 
+Independent display records appear when each item completes. After the first record, the aggregate card stops displaying its body; unfinished items wait for completion. Turning display off hides records and pauses their delivery cursor; re-enabling catches up. These settings do not start model turns. See [Runtime](runtime.en.md) for recovery and fallback behavior.
+
+`streamOutputEnabled=true` and `supervisionEnabled=true` are independent plugin settings with source `plugin` and `nativeKey=null`; neither is passed through to Codex. Display updates Codex output in the chat flow without invoking DSH's model; hosts without the chat-node API use the tool-card fallback. Supervision sends new output in batches and consumes model tokens. Either can run without the other. Turning both off retains native questions and final-result handling.
+
+`autoAnswerQuestions=true` is enabled by default and configurable only through JSON, without a regular settings-form switch. It is a plugin field, not a `codexConfig` key. With supervision disabled, pending App Server questions still notify DSH, without automatically reading ordinary progress. Answer handling is normal task conversation usage and still invokes the model. Set it to `false` to disable automatic question notifications; manual user answers and explicitly requested question tools remain available. Eligible runs detach automatically so the initiating tool cannot block question handling. Interruption, cancellation or disconnect invalidates old questions; normal turn completion can retain async questions for a subsequent turn.
+
+Saved values apply at the next display/supervision check. Turning supervision off withdraws unconsumed inbox input; content already sent to a model request cannot be recalled. New runs automatically detach when supervision and the native host are available. Changing the setting cannot preempt a synchronous tool that already started. Minute-based status queries are available only with both output forwarding and supervision disabled.
+
 Plugin introductions, controls, and the registry editor follow DSH's interface language: Chinese in the Chinese interface and English in the English interface. Model IDs, configuration keys, enum values, and protocol status codes retain their original spelling. Fully restart DSH after updating the plugin so package metadata is read again
 
 Controls and the full JSON editor share the current DSH profile. Precedence is **code defaults → profile settings → supported per-call parameters**. Saving settings affects subsequent tasks and relevant future scheduling checks, not an already launched model turn. `codex_config()` is read-only. Old global/project settings files are neither read nor migrated/deleted
@@ -13,6 +21,7 @@ Important defaults:
 | Setting | Default |
 | --- | --- |
 | `defaultModel` | `gpt-6.1-sol` |
+| `streamOutputEnabled`, `supervisionEnabled` | `true` |
 | `defaultEffort` | `high` |
 | `maxEffortAllowed` | `xhigh` |
 | `autoModelAndEffort` | `false` |
@@ -40,7 +49,7 @@ Drivers are bundled. The trusted-user `driverPath` override is JSON-only; custom
 
 ## Configuration and registry editor
 
-Advanced settings end with **Edit full configuration and registry**. The dialog contains **Table**, **Registry JSON**, and **Configuration JSON** tabs sharing the same draft. The searchable table covers all 29 plugin configuration fields, daily Codex registry fields, and catalog translations, with source, key, value, allowed range, and description/translation columns
+Advanced settings end with **Edit full configuration and registry**. The dialog contains **Table**, **Registry JSON**, and **Configuration JSON** tabs sharing the same draft. The searchable table covers all 31 plugin configuration fields, daily Codex registry fields, and catalog translations, with source, key, value, allowed range, and description/translation columns
 
 Valid JSON and table edits synchronize when switching tabs. Edits remain drafts until Save. Configuration changes go to the current profile; field-rule differences go to `<DSH_HOME>/codex-runner/fields/overrides.json`, and Chinese translation overrides go to `<DSH_HOME>/codex-runner/i18n/zh-CN.user.json`. Clearing a configuration field or setting it to `null` removes its profile override and restores inherited defaults
 
@@ -54,7 +63,7 @@ Restart DSH fully after updating host code or communication interfaces; refreshi
 
 ## Optional controls and token usage
 
-Quota and common settings are shown directly; Advanced settings remain collapsible. Automatic model/effort completion has a grey beta badge, is off by default, and expands its selection-related controls only when enabled
+Quota and common settings are shown directly; Advanced settings remain collapsible. "Let DSH choose model and reasoning effort" is off by default: every run uses the configured default model and default reasoning effort, and DSH neither supplies nor may pass model/effort. The preset selection policy carries a grey beta badge; while the main switch is off the policy row is disabled, and while the policy is off its subordinate controls (selection method, effort cap, policy editor, catalog source) are not rendered. The default form has 21 regular rows, with Advanced settings collapsible
 
 The policy dialog includes task, evidence, downgrade/approval, quota, and advanced-JSON tabs, strict/balanced/economy presets, recommendation reset, preview, and validation. Invalid JSON or catalog values prevent saving. Changes are read by subsequent runs
 
@@ -74,7 +83,7 @@ Bundled defaults come from `lib/codex-registry.json` and are cached in `<DSH_HOM
 
 ## Evidence-based model selection — beta
 
-`selectionMode` accepts `legacy` for task-kind rules, `manual` for explicit model and effort, and `evidence` for structured scope and risk information. Evidence requires `files`, `acceptance`, and `uncertainty`, with optional `plan_file`, interface/architecture/concurrency/security risks, and `failure_reason`
+With DSH model autonomy and a policy both enabled, `selectionMode` accepts `legacy` for task-kind rules, `manual` for explicit model and effort, and `evidence` for structured scope and risk information. Evidence requires `files`, `acceptance`, and `uncertainty`, with optional `plan_file`, interface/architecture/concurrency/security risks, and `failure_reason`. While the main switch is off none of these rules run
 
 The plugin verifies workspace file membership and plan existence, and records the plan's SHA256. Risk, uncertainty, and acceptance descriptions are caller claims, kept separate from verified filesystem facts. Mechanical/documentation work with a plan and declared low uncertainty can select luna/low; declared architectural, interface, concurrency, or security decisions select astra/xhigh. Ordinary work selects sol; environment failures alone do not justify escalation. Missing scope or high uncertainty selects an investigation stage without rewriting the prompt. File count alone does not determine the tier
 
@@ -92,3 +101,16 @@ Explicit model/effort values take priority. All modes remain subject to `maxEffo
 `selectionPolicy` is stored in the current profile. Its default mode is `off`, and `require_approval=false`. `audit` records recommended and actual selections without changing them, requiring override reasons, enforcing quota gates, or requesting extra reviews. `enforce` applies floors to unspecified values, checks override and downgrade reasons, and enforces configured quota rules. If approval is required, it returns `approval_required` without starting a driver; there is no per-run approval UI
 
 The default luna/sol/6.1-sol/astra order is a policy role order, not a catalog-reported benchmark ranking. Unknown model comparisons are recorded as `comparison=unknown` and rejected when enforcement needs an ordering. Selection reasons are stored in `selection.json`, returned by tools, and queryable with `codex_selection` and `codex_read(source="selection")`
+
+## Autonomous selection, defaults, and optional presets
+
+The "Let DSH choose model and reasoning effort" switch, off by default, decides who selects. Off: every run uses the configured `defaultModel`/`defaultEffort`; DSH does not participate and passing `model`/`effort` is rejected. Preset policies do not run at all, though their saved values remain.
+
+On: DSH assesses task goals, scope, uncertainty, correctness and risk before explicitly supplying both `model` and `effort`. With `selectionPolicy.mode=off` (the default) the plugin uses no task-kind mappings, evidence rules or defaults; missing values fail before dispatch. Only audit/enforce enable preset selection: audit records recommended and actual tiers without changing them, while enforce adjusts unspecified tiers, checks override reasons, and enforces floors and quota rules.
+
+Quota (including the five-hour window), cost, waiting time and convenience do not justify unilateral downgrades. Tool instructions require reporting or pausing when the task-appropriate choice is unavailable. Explicit non-task downgrade categories reject before dispatch. Default downgrade categories are scope-reduced/already-reviewed. Legacy `quota.action=allow-downgrade` remains readable but pauses at the threshold under enforcement and is no longer offered in the UI. Scope reduction must reflect a real task change.
+
+This enforces explicit parameters and prevents automatic substitution; it cannot inspect a model's hidden reasoning. No registry field was added. Existing task-kind-only calls must supply a pair or opt into a policy. Existing user policy choices remain preserved.
+
+
+Enabling either output forwarding or supervision disables the polling switch and interval controls. Runtime polling pauses and removes unconsumed reminders while preserving the saved switch and interval. Turning both off restores editing and the saved polling behavior. autoAnswerQuestions alone does not suppress polling. Display itself invokes no DSH model; this exclusion is a configuration rule, not an equivalence between display and model supervision.

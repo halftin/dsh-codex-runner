@@ -1,0 +1,24 @@
+{
+  "facts": {
+    "files": ["docs/architecture-plan.md", "src\\main\\java\\org\\example\\backend\\IPC.md"],
+    "modules": ["docs", "src"],
+    "plan": {
+      "file": "docs/architecture-plan.md",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  },
+  "caller_claims": {
+    "acceptance": "Synthetic fixture: review a sample architecture and report interface risks.",
+    "uncertainty": "high",
+    "interface_change": false,
+    "architecture_decision": true,
+    "concurrency_risk": false,
+    "security_risk": false,
+    "failure_reason": "none"
+  },
+  "reasons": ["Declared architecture/interface/concurrency/security decision or design failure"],
+  "stage": "execution",
+  "model": "gpt-6-sol",
+  "effort": "high",
+  "override_reason": "Synthetic prohibited override: choose a lower model and effort to conserve quota."
+}

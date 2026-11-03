@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "dsh-codex-runner Communication API",
-    "version": "0.5.0-rc.2",
-    "description": "Communication between the plugin settings page and the DSH host, suitable for import into Apipost. This specification does not cover the 15 model tools such as codex_run and does not describe an independent HTTP server. The plugin and DSH Connection Fetch must be enabled. All operations require DSH owner access. Replace the example server with the actual DSH Web base URL, including the port and deployment prefix, and configure a valid owner session Cookie. Cookie names depend on the host address; this specification models the complete Cookie header and does not introduce a plugin API key. Do not substitute Codex login credentials for a DSH session. For business errors returned with HTTP 200, inspect result.ok and result.error. All examples are synthetic and contain no real credentials, accounts, or local paths.",
+    "version": "0.5.3-beta",
+    "description": "Communication between the plugin settings page and the DSH host, suitable for import into Apipost. This specification does not cover the 19 model tools such as codex_run and does not describe an independent HTTP server. The plugin and DSH Connection Fetch must be enabled. All operations require DSH owner access. Replace the example server with the actual DSH Web base URL, including the port and deployment prefix, and configure a valid owner session Cookie. Cookie names depend on the host address; this specification models the complete Cookie header and does not introduce a plugin API key. Do not substitute Codex login credentials for a DSH session. For business errors returned with HTTP 200, inspect result.ok and result.error. All examples are synthetic and contain no real credentials, accounts, or local paths.",
     "license": {
       "name": "MIT",
       "url": "https://github.com/halftin/dsh-codex-runner/blob/main/LICENSE"
@@ -31,6 +31,10 @@
     {
       "name": "Run events",
       "description": "SSE notifications of terminal states"
+    },
+    {
+      "name": "Live output",
+      "description": "Read stored output without invoking a model"
     }
   ],
   "security": [
@@ -740,8 +744,8 @@
           "Run events"
         ],
         "operationId": "runEvents",
-        "summary": "Subscribe to run terminal events (SSE)",
-        "description": "Requires host connection, webServer, rpc.handle, and runEventStream support; the route is not registered if these are unavailable. The connection first receives a comment, then terminal-state invalidation notifications as data: JSON frames. This is not full progress output or a model token stream and does not use a server-response envelope. Each run emits one terminal event. There is no history replay or guaranteed Last-Event-ID recovery. The connection may remain open without any data frames; use a streaming client, since ordinary HTTP tests may time out. Only runs registered in the current process are observed; this operation does not start tasks",
+        "summary": "Subscribe to output changes and terminal run events (SSE)",
+        "description": "Requires host connection, webServer, rpc.handle and runEventStream support. An initial comment is followed by data: JSON invalidations. status=output_changed signals output-index or independent-record confirmation changes; other statuses identify the single terminal notification for each run. Notifications contain no message bodies, have no history replay or guaranteed Last-Event-ID recovery, and may be dropped for slow consumers. Clients must read durable output by cursor on initial connection, reconnection and periodic fallback checks. Keepalive comments are sent every 15 seconds. Reading output can register existing runs; filesystem watches remain for 30 seconds after terminal state to capture final commits. This operation does not start tasks",
         "responses": {
           "200": {
             "description": "Continuous Server-Sent Events; each data frame ends with two newline characters",
@@ -775,6 +779,216 @@
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          },
+          "default": {
+            "$ref": "#/components/responses/HostError"
+          }
+        }
+      }
+    },
+    "/api/codex-runner/getOutput": {
+      "post": {
+        "tags": [
+          "Live output"
+        ],
+        "operationId": "getOutput",
+        "summary": "Read output for an exact session tool call",
+        "description": "Owner access is required. sessionId and callId must identify exactly one run in that session workspace. Optional runId must match that run. Display reads do not invoke a model. Disabled display returns disabled for output and rejects resources. after is exclusive: to read event N, use after=N-1. Large events retain complete JSON resources; resource chunks are base64 bytes, to be concatenated before UTF-8 decoding. The checksum covers the complete resource.",
+        "x-dsh-request-max-code-units": 16384,
+        "requestBody": {
+          "required": true,
+          "description": "application/json; the complete body is limited to 16384 JavaScript string code units. An omitted payload defaults to an empty object, but operations that require arguments will still return a business error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetOutputRequest"
+              },
+              "example": {
+                "type": "client-request",
+                "rpcId": "11111111-1111-4111-8111-111111111111",
+                "method": "codex-runner/getOutput",
+                "payload": {
+                  "sessionId": "11111111-1111-4111-8111-111111111111",
+                  "callId": "call_example",
+                  "after": 0,
+                  "limit": 100
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success or business error; inspect result.ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetOutputResponse"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "Successful response with illustrative data",
+                    "value": {
+                      "type": "server-response",
+                      "rpcId": "11111111-1111-4111-8111-111111111111",
+                      "result": {
+                        "ok": true,
+                        "value": {
+                          "status": "ok",
+                          "run_id": "11111111-1111-4111-8111-111111111111",
+                          "events": [],
+                          "next_cursor": 0,
+                          "has_more": false,
+                          "latest_cursor": 0,
+                          "gap": null,
+                          "truncated": false,
+                          "diagnostic": null,
+                          "backend": "app-server",
+                          "execution_status": "running",
+                          "mobile": "unverified"
+                        }
+                      }
+                    }
+                  },
+                  "businessError": {
+                    "summary": "Business errors also use HTTP 200",
+                    "value": {
+                      "type": "server-response",
+                      "rpcId": "11111111-1111-4111-8111-111111111111",
+                      "result": {
+                        "ok": false,
+                        "error": {
+                          "code": "codex-runner/request",
+                          "message": "Invalid read-only service request",
+                          "details": {}
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "413": {
+            "$ref": "#/components/responses/RequestTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/ExpectedJson"
+          },
+          "default": {
+            "$ref": "#/components/responses/HostError"
+          }
+        }
+      }
+    },
+    "/api/codex-runner/getOutputResource": {
+      "post": {
+        "tags": [
+          "Live output"
+        ],
+        "operationId": "getOutputResource",
+        "summary": "Read a complete output resource in byte chunks",
+        "description": "Owner access is required. sessionId and callId must identify exactly one run in that session workspace. Optional runId must match that run. Display reads do not invoke a model. Disabled display returns disabled for output and rejects resources. after is exclusive: to read event N, use after=N-1. Large events retain complete JSON resources; resource chunks are base64 bytes, to be concatenated before UTF-8 decoding. The checksum covers the complete resource.",
+        "x-dsh-request-max-code-units": 16384,
+        "requestBody": {
+          "required": true,
+          "description": "application/json; the complete body is limited to 16384 JavaScript string code units. An omitted payload defaults to an empty object, but operations that require arguments will still return a business error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetOutputResourceRequest"
+              },
+              "example": {
+                "type": "client-request",
+                "rpcId": "11111111-1111-4111-8111-111111111111",
+                "method": "codex-runner/getOutputResource",
+                "payload": {
+                  "sessionId": "11111111-1111-4111-8111-111111111111",
+                  "callId": "call_example",
+                  "sequence": 1,
+                  "offset": 0,
+                  "limit": 32768
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success or business error; inspect result.ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetOutputResourceResponse"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "Successful response with illustrative data",
+                    "value": {
+                      "type": "server-response",
+                      "rpcId": "11111111-1111-4111-8111-111111111111",
+                      "result": {
+                        "ok": true,
+                        "value": {
+                          "encoding": "base64",
+                          "data": "e30=",
+                          "offset": 0,
+                          "next_offset": 2,
+                          "bytes": 2,
+                          "has_more": false,
+                          "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+                        }
+                      }
+                    }
+                  },
+                  "businessError": {
+                    "summary": "Business errors also use HTTP 200",
+                    "value": {
+                      "type": "server-response",
+                      "rpcId": "11111111-1111-4111-8111-111111111111",
+                      "result": {
+                        "ok": false,
+                        "error": {
+                          "code": "codex-runner/request",
+                          "message": "Invalid read-only service request",
+                          "details": {}
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "413": {
+            "$ref": "#/components/responses/RequestTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/ExpectedJson"
           },
           "default": {
             "$ref": "#/components/responses/HostError"
@@ -1786,7 +2000,7 @@
           },
           "status": {
             "type": "string",
-            "description": "Terminal status of this run, such as completed, failed, or cancelled"
+            "description": "output_changed indicates output or independent-record confirmation changes; other values are terminal run statuses such as completed, failed or cancelled"
           }
         },
         "additionalProperties": false
@@ -2233,6 +2447,433 @@
                         "$ref": "#/components/schemas/RegistryEditorView"
                       }
                     ]
+                  }
+                }
+              },
+              {
+                "$ref": "#/components/schemas/ServiceError"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "OutputPayload": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          },
+          "callId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          },
+          "after": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200
+          },
+          "runId": {
+            "type": "string",
+            "description": "Optional exact run identity; must match sessionId and callId."
+          }
+        },
+        "required": [
+          "sessionId",
+          "callId"
+        ],
+        "additionalProperties": false
+      },
+      "OutputResourcePayload": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          },
+          "callId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 65536
+          },
+          "runId": {
+            "type": "string",
+            "description": "Optional exact run identity; must match sessionId and callId."
+          }
+        },
+        "required": [
+          "sessionId",
+          "callId",
+          "sequence"
+        ],
+        "additionalProperties": false
+      },
+      "OutputEvent": {
+        "type": "object",
+        "required": [
+          "version",
+          "runId",
+          "sequence",
+          "backend",
+          "method",
+          "receivedAt"
+        ],
+        "properties": {
+          "version": {
+            "type": "integer",
+            "enum": [
+              1
+            ]
+          },
+          "runId": {
+            "$ref": "#/components/schemas/RpcId"
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "backend": {
+            "type": "string",
+            "enum": [
+              "exec",
+              "app-server"
+            ]
+          },
+          "method": {
+            "type": "string"
+          },
+          "receivedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "threadId": {
+            "type": "string",
+            "nullable": true
+          },
+          "turnId": {
+            "type": "string",
+            "nullable": true
+          },
+          "itemId": {
+            "type": "string",
+            "nullable": true
+          },
+          "params": {},
+          "payload": {
+            "type": "object",
+            "required": [
+              "resource",
+              "bytes",
+              "sha256",
+              "complete",
+              "preview",
+              "previewTruncated"
+            ],
+            "properties": {
+              "resource": {
+                "type": "string"
+              },
+              "bytes": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "sha256": {
+                "type": "string"
+              },
+              "complete": {
+                "type": "boolean"
+              },
+              "preview": {
+                "type": "string"
+              },
+              "previewTruncated": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      },
+      "OutputView": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "unavailable",
+              "disabled"
+            ]
+          },
+          "run_id": {
+            "$ref": "#/components/schemas/RpcId"
+          },
+          "events": {
+            "type": "array",
+            "maxItems": 200,
+            "items": {
+              "$ref": "#/components/schemas/OutputEvent"
+            }
+          },
+          "next_cursor": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "has_more": {
+            "type": "boolean"
+          },
+          "latest_cursor": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "gap": {},
+          "truncated": {
+            "type": "boolean"
+          },
+          "diagnostic": {
+            "type": "string",
+            "nullable": true
+          },
+          "backend": {
+            "type": "string",
+            "enum": [
+              "exec",
+              "app-server"
+            ]
+          },
+          "execution_status": {
+            "type": "string"
+          },
+          "mobile": {
+            "type": "string",
+            "enum": [
+              "unverified"
+            ],
+            "description": "Existing compatibility value; phone remote support is outside this release scope."
+          },
+          "item_records": {
+            "type": "boolean",
+            "description": "True when this run has committed independent display records. Aggregate clients can suppress duplicate content. Omitted when display is disabled."
+          }
+        },
+        "required": [
+          "status",
+          "run_id",
+          "events",
+          "next_cursor",
+          "has_more"
+        ],
+        "additionalProperties": false
+      },
+      "OutputResourceView": {
+        "type": "object",
+        "properties": {
+          "encoding": {
+            "type": "string",
+            "enum": [
+              "base64"
+            ]
+          },
+          "data": {
+            "type": "string",
+            "format": "byte"
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "next_offset": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "has_more": {
+            "type": "boolean"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "required": [
+          "encoding",
+          "data",
+          "offset",
+          "next_offset",
+          "bytes",
+          "has_more",
+          "sha256"
+        ],
+        "additionalProperties": false
+      },
+      "GetOutputRequest": {
+        "type": "object",
+        "required": [
+          "type",
+          "rpcId",
+          "method",
+          "payload"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "client-request"
+            ]
+          },
+          "rpcId": {
+            "$ref": "#/components/schemas/RpcId"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "codex-runner/getOutput"
+            ]
+          },
+          "payload": {
+            "$ref": "#/components/schemas/OutputPayload"
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetOutputResponse": {
+        "type": "object",
+        "required": [
+          "type",
+          "rpcId",
+          "result"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "server-response"
+            ]
+          },
+          "rpcId": {
+            "$ref": "#/components/schemas/RpcId"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": [
+                  "ok",
+                  "value"
+                ],
+                "properties": {
+                  "ok": {
+                    "type": "boolean",
+                    "enum": [
+                      true
+                    ]
+                  },
+                  "value": {
+                    "$ref": "#/components/schemas/OutputView"
+                  }
+                }
+              },
+              {
+                "$ref": "#/components/schemas/ServiceError"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetOutputResourceRequest": {
+        "type": "object",
+        "required": [
+          "type",
+          "rpcId",
+          "method",
+          "payload"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "client-request"
+            ]
+          },
+          "rpcId": {
+            "$ref": "#/components/schemas/RpcId"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "codex-runner/getOutputResource"
+            ]
+          },
+          "payload": {
+            "$ref": "#/components/schemas/OutputResourcePayload"
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetOutputResourceResponse": {
+        "type": "object",
+        "required": [
+          "type",
+          "rpcId",
+          "result"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "server-response"
+            ]
+          },
+          "rpcId": {
+            "$ref": "#/components/schemas/RpcId"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": [
+                  "ok",
+                  "value"
+                ],
+                "properties": {
+                  "ok": {
+                    "type": "boolean",
+                    "enum": [
+                      true
+                    ]
+                  },
+                  "value": {
+                    "$ref": "#/components/schemas/OutputResourceView"
                   }
                 }
               },

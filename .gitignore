@@ -4,15 +4,22 @@
 !/.gitattributes
 !/README.md
 !/README.en.md
+!/CHANGELOG.md
 !/LICENSE
 !/package.json
 !/dsh.plugin.json
 !/cordis.patch.yml
 !/lib/
 !/drivers/
+!/scripts/
+!/tests/
+!/.github/
 !/locale/
 !/docs/
 /docs/*
+!/docs/01.png
+!/docs/02.gif
+!/docs/03.gif
 !/docs/README.md
 !/docs/README.en.md
 !/docs/installation.md
@@ -23,6 +30,7 @@
 !/docs/configuration.en.md
 !/docs/runtime.md
 !/docs/runtime.en.md
+!/docs/release-acceptance.md
 !/docs/api/
 /docs/api/*
 !/docs/api/openapi.json
@@ -34,6 +42,8 @@ node_modules/
 .codex-runner/
 *.tgz
 *.log
+/logs/
+/.local-dev/
 *.tmp
 .env
 .env.*
@@ -43,6 +53,11 @@ test-results/
 
 # Historical working notes, one-off scripts and obsolete test output.
 /tasks/
+/docs/codex-streaming-supervision-plan.md
+/scripts/fixtures/eui-neo-selection.json
+/scripts/experiment-chat-display.mjs
+/scripts/chat-display-client-probe.mjs
+/scripts/chat-display-browser-probe.mjs
 # Unimplemented upstream proposal; not part of this plugin version.
 /docs/upstream-settings-row.md
 

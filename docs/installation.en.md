@@ -2,35 +2,39 @@
 
 [Project home](../README.en.md) · [Documentation](README.en.md) · [中文](installation.md)
 
+This candidate is prepared locally and has not been published. Use a locally packed archive now; npm and Git tag examples below apply only after the corresponding release is published. Current-source offline verification passed 41/41 on Node 24.22.2. Older host and Node-version acceptance below is historical evidence, not a new full candidate acceptance.
+
 ## Supported environment
 
-The initial release is `0.5.0-rc.2`, for **Windows only**. It requires Node `>=20`, DSH `>=0.2.0-rc.2 <0.3.0`, and an authenticated Codex CLI installation. Isolated acceptance covered installation, settings persistence, background-run queries after a host restart, cancellation, and uninstall on Windows / Node 24.19.0 / DSH 0.2.1-rc.3 Web profile. These checks used a deterministic fake CLI without real model calls. The latest Desktop installer, other Windows machines, and Node 20/22 were not exercised in that acceptance run; the declared version range does not imply that every included version was tested
+The `0.5.3-beta` candidate supports **Windows only**. The plugin requires Node `>=22.23.4` and DSH `>=0.2.1-rc.3 <0.3.0`, and requires an authenticated Codex CLI. Offline regression passes on Node 20.20.2, 22.23.4, and 24.19.0. Real DSH 0.2.1-rc.3 Web profile installation, settings persistence, background-run queries after restart, cancellation, and uninstall pass on Node 22.23.4 and 24.19.0. **This DSH CLI gates its entry point on `import.meta.main`; on Node 20.20.2 it exits without executing commands. Passing offline plugin tests on Node 20 does not establish host compatibility. Use the tested Node 22.23.4 or 24.19.0 for this host.** The third-party host was not patched to bypass this limitation.
 
-The Codex CLI baseline is `0.160.1`. The compatibility driver requires `exec --json`, `exec resume`, and `queue`; the default driver requires App Server v2. Automatic model and reasoning-effort selection is an optional **beta**, disabled by default. Its task-complexity accuracy and actual quota savings have not been demonstrated
+Package/browser acceptance uses a deterministic model and simulated Codex. Separate Node 24 tests verify real DSH and real Codex steering during execution and original-request blocking answers in Plan mode. The latest Desktop installer, other Windows machines, and every intermediate Node version have not been individually tested.
+
+The Codex CLI baseline is `0.160.1`. The compatibility driver requires `exec --json`, `exec resume`, and `queue`; the default driver requires App Server v2. DSH model autonomy is disabled by default, so runs use the configured default tier. The optional preset policy is also off by default and marked **beta**; its task-complexity accuracy and actual quota savings have not been demonstrated
 
 ## Installation methods
 
 Install DSH, Node, and Codex CLI first, then run `codex login` in a terminal. The plugin does not bundle Codex CLI, install it, change `PATH`, sign you in, or copy credentials
 
-Enter `dsh-codex-runner@0.5.0-rc.2` in **Plugins → Add plugin**, or use a supported DSH CLI to install into the intended profile:
+Enter `dsh-codex-runner@0.5.3-beta` in **Plugins → Add plugin**, or use a supported DSH CLI to install into the intended profile:
 
 ```text
-dsh plugin --profile <profile> add dsh-codex-runner@0.5.0-rc.2
+dsh plugin --profile <profile> add dsh-codex-runner@0.5.3-beta
 ```
 
-This release uses the npm `next` prerelease tag. Pin the version to keep subsequent updates from changing the installed code. A separate `npm install` step in your project is unnecessary
+After publication, pin the version to keep prerelease tag updates from changing the installed code. A separate `npm install` step in your project is unnecessary
 
-Alternatively, [download the `.tgz` from GitHub Releases](https://github.com/halftin/dsh-codex-runner/releases/download/v0.5.0-rc.2/dsh-codex-runner-0.5.0-rc.2.tgz) and install the local archive:
+Run `npm pack` locally to create `dsh-codex-runner-0.5.3-beta.tgz`, then install it. Published archives will be listed in [GitHub Releases](https://github.com/halftin/dsh-codex-runner/releases):
 
 ```text
-dsh plugin --profile <profile> add ./dsh-codex-runner-0.5.0-rc.2.tgz
+dsh plugin --profile <profile> add ./dsh-codex-runner-0.5.3-beta.tgz
 dsh --profile <profile> --dump-config
 ```
 
 You can also install the release tag or a fixed commit from the GitHub repository:
 
 ```text
-dsh plugin --profile <profile> add github:halftin/dsh-codex-runner#v0.5.0-rc.2
+dsh plugin --profile <profile> add github:halftin/dsh-codex-runner#v0.5.3-beta
 ```
 
 The repository root contains the installable `package.json`; no build or prepare step is required. DSH activates the bundle through `dsh.bundle.patch`. Installing a dependency with bare pnpm does not necessarily activate the bundle

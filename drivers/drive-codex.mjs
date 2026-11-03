@@ -6,7 +6,7 @@ import { answerSnapshot, isFinalAnswerItem, createDebugLog, failureSummary, utf8
 /**
  * drive-codex.mjs —— 驱动 Codex CLI（ChatGPT Plus 订阅）执行单个任务
  *
- * 契约：提示词走文件 → UTF-8 写 stdin；只保存有界 meta，事件仅在 debug 时有界写入。
+ * 契约：提示词走文件 → UTF-8 写 stdin；业务输出独立持久化，调试事件另行有界写入。
  *
  * 本机实测要点（2026-10-06，codex-cli 0.160.1 / 桌面版 0.159.0）：
  *  1) `-s workspace-write` 在 Windows 上**必须**同时给 `windows.sandbox="elevated"`，
@@ -55,6 +55,7 @@ import { errorTextOf, quotaEvidence, quotaVerdict } from './quota-detect.mjs';
 import { resolveCodexExe } from '../lib/executable.js';
 import { atomicJson, readJson, validRunId, validateLabel } from '../lib/run-store.js';
 import { captureReply } from '../lib/reply-signals.js';
+import {OutputWriter} from '../lib/output-stream.js';
 
 function parseArgv(argv) {
   const out = {};
@@ -235,6 +236,7 @@ const CODEX_EXE = resolveCodexExe();
 if (!CODEX_EXE) { console.error('[drive-codex] codex executable not found (set CODEX_EXE)'); process.exit(2); }
 
 fs.mkdirSync(logDir, { recursive: true });
+const output=runId?new OutputWriter({dir:logDir,runId,backend:'exec'}):null;
 const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
 // 文件名带 driver pid：并发/重复派发若落在同一秒，也不会互相覆盖日志与 meta。
 const metaFile = path.join(logDir, runId ? 'result.meta.json' : label + '-' + stamp + '-p' + process.pid + '.meta.json');
@@ -381,6 +383,7 @@ function consume(line) {
   // 注意：**不在这里扫描整行**——那行文本包含 agent 读到的源码/日志/命令回显，
   // 曾把源码行号 "2429:" 误判成额度触顶（见 drivers/quota-detect.mjs 的事故说明）。
   let o; try { o = JSON.parse(line); } catch { return; }
+  output?.append(o.type||'unknown',o,{threadId,turnId:meta.turnId});
   try { debug.write(o); meta.logTruncated = debug.truncated; }
   catch {killTree('log-io-error');}
   lastEventTs = new Date().toISOString();

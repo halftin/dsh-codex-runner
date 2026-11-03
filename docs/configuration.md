@@ -4,6 +4,16 @@
 
 ## 设置
 
+独立展示记录在每个 item 完成时出现；首条记录出现后聚合卡片停止展示正文，未完成项等待完成后显示。关闭显示会隐藏记录并暂停投递游标，重新开启后追上积压，不启动模型回合。恢复与回退规则见[运行说明](runtime.md)。
+
+`streamOutputEnabled=true` 与 `supervisionEnabled=true` 是两个独立的插件设置，来源为 plugin、nativeKey=null，不透传为 Codex 原生字段。仅显示持续更新主聊天区的 Codex 输出，不调用 DSH 模型；宿主缺少聊天节点接口时回退工具卡片；主动监督会分批把新增内容送入模型并消耗 token。关闭显示仍可监督，关闭监督仍可显示；两者都关闭也保留原生问答入口和最终结果流程。
+
+`autoAnswerQuestions=true`（自动处理 Codex 问答）默认开启，只在配置 JSON 中修改，不增加普通设置表单开关。它是插件字段，不能放进 `codexConfig`。关闭主动监督后，仍会在 App Server 出现待答问题时通知 DSH；不自动读取普通进度。问答属于任务正常交互用量，仍会调用模型。设为 `false` 可关闭自动问答通知，用户回答与明确要求模型查询/回答的工具入口仍保留。自动问答可用时任务自动后台返回，避免启动工具阻塞问题处理。
+
+例如，仅保留自动问答：在完整配置 JSON 中设置 `"supervisionEnabled": false, "autoAnswerQuestions": true`。真正中断、取消或断连使旧问题失效；普通回合结束仍允许异步问题跨轮回答。
+
+保存后下一次展示/监督检查即生效。关闭监督可撤回 inbox 中未消费的输入，已进入模型请求的内容不能撤回。监督开启且宿主可用时，新任务自动转后台；已经以同步方式启动的工具不能被设置变更抢占。分钟级状态查询仅在输出转发和主动监督都关闭时运行。
+
 插件介绍、设置控件和注册表编辑器随 DSH 的界面语言切换：中文界面显示中文，英文界面显示英文；模型标识、配置键和协议状态保留原始值。更新插件后完整重启 DSH，以重新读取插件元数据
 
 优先级由低到高：代码默认 → DSH profile 配置 → 支持的单次参数。设置页控件与“编辑完整配置与注册表”编辑器共用同一份 profile 数据，由 DSH 原生配置服务保存；不再读取或写入独立的全局、工作区设置 JSON 文件。已有独立文件不迁移、不删除，也不会覆盖页面设置。运行记录和日志仍保存在各工作区的 `.codex-runner/logs/`。
@@ -26,7 +36,7 @@ codex_config()
 
 “沙箱内网络”的表单、完整 JSON 和运行前校验读取注册表中的 `sandbox_workspace_write.network_access` 定义，并向两种驱动显式传递布尔值；关闭会发送 `false`，覆盖 Codex 原有的网络开启配置。
 
-task_kind 规则：mechanical/docs → luna/low；review → sol/medium；implement → sol/high；architect/rework → astra/xhigh。显式 model/effort 优先。超过 maxEffortAllowed 需显式 unlock_effort=true。luna 不接受 ultra。
+仅在主开关开启且 `selectionPolicy.mode` 为 audit/enforce 时启用 task_kind 规则：mechanical/docs → luna/low；review → sol/medium；implement → sol/high；architect/rework → astra/xhigh。显式 model/effort 优先。超过 maxEffortAllowed 需显式 unlock_effort=true。luna 不接受 ultra。
 
 codexConfig 和 extraCodexConfig 使用同一白名单；后者是 k=v 数组，不是绕过保护策略的入口。可用键由 `codex_config()` 列出。无效的 profile 配置在运行前报告错误，不静默回落。
 
@@ -34,10 +44,10 @@ driver 随包包含，driverPath 仅保留在 JSON 配置中，不在设置页�
 
 ## 设置页与策略弹窗
 
-设置页直接展示额度和常用设置，仅高级设置保留折叠。全部展开时共 19 个常规设置行；自动补全默认关闭，其关联选档控件随开关展开或折叠；codexExecutable、codexHome 位于高级设置，各自使用左侧说明、右侧原生路径输入框的同行布局，窄屏自动换行；定时查询开关和间隔滑块在核心运行设置中合并显示。selectionPolicy 的模式直接在设置页编辑，关闭／仅审计／强制执行共用原有 JSON 字段；详细规则仍通过策略弹窗编辑。目录不可用时仍显示 fallback 和错误来源，可手动刷新。
+设置页直接展示额度和常用设置，仅高级设置保留折叠。默认显示 21 个常规设置行（高级设置可折叠）；「DSH 自主选模型与推理强度」默认关闭，此时每次运行固定使用默认模型与默认推理强度，DSH 不传也不接受 model/effort；预设选档策略带灰色 beta 标签，主开关关闭时策略行禁用，策略本身关闭时其下方控件（选档方式、强度自治上限、策略按钮、目录来源）一律不显示；codexExecutable、codexHome 位于高级设置，各自使用左侧说明、右侧原生路径输入框的同行布局，窄屏自动换行；定时查询开关和间隔滑块在核心运行设置中合并显示。selectionPolicy 的模式直接在设置页编辑，关闭／仅审计／强制执行共用原有 JSON 字段；详细规则仍通过策略弹窗编辑。目录不可用时仍显示 fallback 和错误来源，可手动刷新。
 页面分组、行顺序和默认折叠状态由 lib/client.js 中的 PAGE_LAYOUT 统一维护，不属于用户配置。
 开关/下拉/滑块行使用插件内置的 Row（官方 primitives 目前没有导出行组件）；排版统一取 `TYPE_LABEL/TYPE_BODY/TYPE_HINT`，几何对齐官方 `SettingsValueField`。
-选档策略弹窗包含任务、证据、降级/审批、额度和高级 JSON 五个 tab，提供严格/平衡/省额度预设、恢复推荐、预览和校验。低于推荐 floor 有文字警告；无效 JSON 或目录值阻止保存；关闭未保存修改需要确认。保存后下次 run 热读取；审批仍返回 approval_required，不提供逐次批准入口。
+选档策略弹窗包含任务、证据、降级/审批、额度和高级 JSON 五个 tab，提供严格/平衡/轻量任务预设、恢复推荐、预览和校验。低于推荐 floor 有文字警告；无效 JSON 或目录值阻止保存；关闭未保存修改需要确认。保存后下次 run 热读取；审批仍返回 approval_required，不提供逐次批准入口。
 
 ## Codex 字段注册表
 
@@ -53,7 +63,7 @@ driver 随包包含，driverPath 仅保留在 JSON 配置中，不在设置页�
 
 ## 有依据的模型选择（Beta）
 
-`selectionMode=legacy` 保留原任务类型规则；`manual` 要求每次明确传 model 和 effort；`evidence` 要求结构化 evidence：`files`、`acceptance`、`uncertainty`，可附 `plan_file`、接口/架构/并发/权限风险及 `failure_reason`。
+主开关与预设策略都启用时，`selectionMode=legacy` 保留原任务类型规则；`manual` 要求每次明确传 model 和 effort；`evidence` 要求结构化 evidence：`files`、`acceptance`、`uncertainty`，可附 `plan_file`、接口/架构/并发/权限风险及 `failure_reason`。主开关关闭时这些规则一律不参与运行。
 
 插件核验文件属于工作区、计划存在并记录 SHA256；风险和验收描述属于调用方声明，返回值会与文件事实分开。机械/文档任务有明确计划且不确定性低时使用 luna/low；架构、接口、并发或权限决策使用 astra/xhigh；常规任务使用 sol；环境故障不会自动升级。范围缺失或不确定性高时先派发只调查、不实施的任务。文件数量本身不决定档位。
 
@@ -65,6 +75,19 @@ driver 随包包含，driverPath 仅保留在 JSON 配置中，不在设置页�
 | --- | --- |
 | `codex_selection` | 只读筛选当前工作区的推荐/实际选档、降级原因、策略版本和 run_id。 |
 
-`selectionPolicy` 是 profile JSON，默认 off、require_approval=false，只读取当前 profile；缺失部分由代码默认值补齐。off 不应用增强规则；audit 只记录推荐和实际档位，不改变选档、不强制理由、不执行额度门禁或要求额外复核；enforce 才调整未显式指定的档位、校验覆盖理由并执行额度和降档规则，需要审批时返回 approval_required 且不启动 driver。当前没有逐次审批 UI，不能通过工具参数伪造批准。unlock_effort 只突破上限，不能绕过 floor。
+`selectionPolicy` 是 profile JSON，默认 off、require_approval=false，只读取当前 profile；缺失部分由代码默认值补齐。主开关关闭时策略整体不参与运行，审计记为 off。主开关开启且策略为 off 时，不应用任务类型、证据或默认值选档，必须由 DSH 事前明确提供 model 和 effort；audit 只记录推荐和实际档位，不改变选档、不强制理由、不执行额度门禁或要求额外复核；enforce 才调整未显式指定的档位、校验覆盖理由并执行额度和降档规则，需要审批时返回 approval_required 且不启动 driver。当前没有逐次审批 UI，不能通过工具参数伪造批准。unlock_effort 只突破上限，不能绕过 floor。
 模型顺序是默认策略角色顺序（luna/sol/6.1-sol/astra），不是目录性能事实。陌生模型与不同 floor 的强度关系不明时明确记录 comparison=unknown；enforce 拒绝。
-每个新 run 都保存 selection.json；codex_list 显示 model/effort/downgrade；codex_read(source="selection") 有界读取，旧 run 返回 null。已有无策略设置不需迁移；由 profile 人工设置 mode=off 可关闭 floor，仍保留审计及显式覆盖理由。
+每个新 run 都保存 selection.json；codex_list 显示 model/effort/downgrade；codex_read(source="selection") 有界读取，旧 run 返回 null。兼容变化：主开关关闭后显式 model/effort 会被拒绝；需要 DSH 选档的调用必须先开启主开关，只有在策略关闭时还必须显式给出两项。mode=off 保留实际选档记录，不要求额外覆盖理由。
+
+## 自主选档、默认档位与预设策略
+
+选档归属由「DSH 自主选模型与推理强度」决定，默认关闭。关闭时每次运行固定使用 `defaultModel`/`defaultEffort`，DSH 不参与选档，传入 `model`/`effort` 会被拒绝；预设策略整体不参与运行，但已保存的策略值保留。
+
+开启后由 DSH 在派发前根据任务目标、范围、不确定性、正确性要求和风险明确给出 `model`、`effort`。此时若 `selectionPolicy.mode=off`（默认），插件不使用任务类型表、证据规则或默认档位；缺少任一项报错且不启动 Codex。只有 audit/enforce 才启用策略选档：audit 只记录推荐和实际档位，enforce 才调整未显式指定的档位并执行 floor、覆盖理由与额度规则。
+
+5H/7D 额度、成本、等待及调用方便程度不能成为擅自降低模型或强度的理由。工具说明要求保留任务所需档位，不可用时报告或暂停；明确的非任务降档类别在派发前拒绝。默认降档类别仅保留 scope-reduced/already-reviewed。旧 JSON 的 quota.action=allow-downgrade 仍可读取，但强制策略下达到阈值时按暂停处理，界面不再提供该选项。缩小任务范围需要真实的任务变更，不能只改理由掩盖降档。
+
+该机制保证显式选档和无自动降档，不声称能检查模型不可见的内部判断。没有新增注册表字段；复用现有 selectionPolicy.mode 与 autoModelAndEffort 主开关，用户选择会保留。旧的 task_kind-only 调用需要开启主开关并在策略开启时使用，或保持主开关关闭、改用默认档位。
+
+
+开启输出转发或主动监督中的任意一项时，定时查询开关和间隔不可编辑，运行时也暂停查询并删除尚未消费的查询提醒；已保存的开关和间隔保留。两项都关闭后恢复编辑，原定时查询设置重新生效。仅开启 autoAnswerQuestions 不触发此互斥。输出转发本身不调用 DSH 模型；此互斥是配置规则，不表示显示等于模型监督。

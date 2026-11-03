@@ -2,33 +2,37 @@
 
 [项目首页](../README.md) · [文档目录](README.md) · [English](installation.en.md)
 
+当前候选版本仅在本地准备，尚未发布。现阶段使用本地打包安装；下方 npm 与 Git 标签安装示例须等对应发行发布后使用。当前源码在 Node 24.22.2 下离线回归 41/41 通过；下述其他 Node 版本及宿主验收属于历史证据，不等同于本候选版本重新完成全部验收。
+
 ## 支持范围
 
-当前为首个发布版本 `0.5.0-rc.2`，仅支持 Windows。需要 Node `>=20`、DSH `>=0.2.0-rc.2 <0.3.0` 和已登录的 Codex CLI。已在 Windows / Node 24.19.0 / DSH 0.2.1-rc.3 Web profile 完成隔离安装、设置保存、后台任务重启查询、取消和卸载验收；验收使用确定性假 CLI，未调用真实模型。最新版桌面安装器、其他 Windows 机器及 Node 20/22 未完成本轮实际验收，版本范围不表示其中每个版本都经过测试。Codex CLI 基线为 `0.160.1`；兼容驱动需要 `exec --json`、`exec resume` 与 `queue`，新驱动需要 App Server v2 协议。自动补全模型和思考强度仍为默认关闭的 beta 功能，尚未验证复杂度判断准确率或实际额度节省
+当前候选版本为 `0.5.3-beta`，仅支持 Windows。插件最低要求 Node `>=22.23.4`、DSH `>=0.2.1-rc.3 <0.3.0`，还需要已登录的 Codex CLI。插件离线回归在 Node 20.20.2、22.23.4、24.19.0 通过；真实 DSH 0.2.1-rc.3 Web profile 的安装、设置保存、后台任务重启查询、取消和卸载在 Node 22.23.4、24.19.0 通过。**该 DSH 版本的 CLI 入口使用 `import.meta.main`，在 Node 20.20.2 下会直接退出而不执行命令，因此 Node 20 的离线通过不代表可以运行这套宿主。实际运行请使用已验证的 Node 22.23.4 或 24.19.0。** 未修改第三方宿主来绕过此限制。
+
+包/浏览器验收使用确定性模型与模拟 Codex；另在 Node 24 上完成真实 DSH 模型与真实 Codex 的活动期转向、Plan 阻塞问答原请求闭环。最新版桌面安装器、其他 Windows 机器及所有中间 Node 版本未逐一验证。Codex CLI 基线为 `0.160.1`；兼容驱动需要 `exec --json`、`exec resume` 与 `queue`，新驱动需要 App Server v2 协议。DSH 自主选档默认关闭，运行使用固定默认档位；可选预设策略也默认关闭并标为 beta，尚未验证复杂度判断准确率或实际额度节省。
 
 ## 安装方法
 
 安装前准备：DSH、Node、Codex CLI；先在终端完成 `codex login`。CLI 不包含在插件包中。两个驱动均继承 Codex 用户配置，并显式传递本次主任务的模型、强度、审批和沙箱权限。原生子 agent 的启用、线程上限和默认模型/强度由 Codex 自身配置及模型调用决定，插件不再提供重复覆盖；MCP/插件等原生扩展也按 Codex 配置加载。
 
-在 DSH“插件 → 添加插件”中输入 `dsh-codex-runner@0.5.0-rc.2`，或使用支持的 DSH CLI 安装到目标 profile：
+在 DSH“插件 → 添加插件”中输入 `dsh-codex-runner@0.5.3-beta`，或使用支持的 DSH CLI 安装到目标 profile：
 
 ```text
-dsh plugin --profile <profile> add dsh-codex-runner@0.5.0-rc.2
+dsh plugin --profile <profile> add dsh-codex-runner@0.5.3-beta
 ```
 
-npm 上此版本使用 `next` 预发布标签；固定版本号可避免后续更新改变安装内容。无需在项目中额外执行 `npm install`
+发布后使用固定版本号安装，避免后续预发布标签更新改变安装内容。无需在项目中额外执行 `npm install`
 
-也可从 [GitHub Releases 下载 `.tgz`](https://github.com/halftin/dsh-codex-runner/releases/download/v0.5.0-rc.2/dsh-codex-runner-0.5.0-rc.2.tgz)，再安装本地文件：
+本地执行 `npm pack` 生成 `dsh-codex-runner-0.5.3-beta.tgz`，再安装该文件；发布后的下载入口见 [GitHub Releases](https://github.com/halftin/dsh-codex-runner/releases)：
 
 ```text
-dsh plugin --profile <profile> add ./dsh-codex-runner-0.5.0-rc.2.tgz
+dsh plugin --profile <profile> add ./dsh-codex-runner-0.5.3-beta.tgz
 dsh --profile <profile> --dump-config
 ```
 
 也可从 GitHub 仓库安装，使用发行标签或固定 commit：
 
 ```text
-dsh plugin --profile <profile> add github:halftin/dsh-codex-runner#v0.5.0-rc.2
+dsh plugin --profile <profile> add github:halftin/dsh-codex-runner#v0.5.3-beta
 ```
 
 仓库根必须是本包的 package.json。提交 lib、drivers 等可运行 JS，不需要构建或 prepare 脚本。DSH 通过 dsh.bundle.patch 加入 profile 的 bundles 列表；单纯执行裸 pnpm 不保证激活该层。

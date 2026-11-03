@@ -2,20 +2,24 @@
 
 [Documentation](../README.en.md) · [中文](README.md) · [English OpenAPI JSON](openapi.en.json) · [中文 OpenAPI JSON](openapi.json)
 
-`openapi.en.json` uses OpenAPI 3.0.3 and describes six implemented POST operations and one SSE stream. It includes English operation, field, authentication, and error descriptions, along with English example titles. It does not define HTTP endpoints for the 15 DSH model tools; see [Tools and task operations](../tools.en.md)
+`openapi.en.json` uses OpenAPI 3.0.3 and describes eight implemented POST operations and one SSE stream. It includes English operation, field, authentication, and error descriptions, along with English example titles. It does not define HTTP endpoints for the 19 DSH model tools; see [Tools and task operations](../tools.en.md)
 
 `openapi.json` is the Chinese edition. Both editions have identical endpoint paths, field keys, validation constraints, and example data; import either one. The documentation language does not change the meaning of the registry's `zh-CN` translation data
 
 ## Import into Apipost
 
 1. Open project settings, manual project import, and choose **Swagger**
-2. Upload `openapi.en.json` and confirm that **seven operations** were imported, grouped under Model catalog, Quota and subagents, Registry editing, and Run events
+2. Upload `openapi.en.json` and confirm that **nine operations** were imported, grouped under Model catalog, Quota and subagents, Registry editing, Run events, and Live output
 3. Replace `http://localhost` with the actual DSH Web base URL, including the port and any deployment prefix
 4. Configure the full Cookie header of a valid DSH owner browser session in a private Apipost environment
 
 DSH hosts and authenticates these routes; the plugin does not start an independent HTTP server. Disabled plugins or missing Connection Fetch support can produce 404. The cookie name is authority-dependent. Use the real session rather than hardcoding a name, do not share credentials in documentation, and do not substitute Codex authentication for the DSH session
 
 ## Requests and errors
+
+Both output read methods accept an optional `runId` and reject a mismatch. `getOutput.item_records=true` indicates committed independent display records, allowing aggregate cards to hide duplicate content. This field may be omitted when display is disabled. To read event N use `after=N-1`; source output sequences differ from host chat record sequences.
+
+`getOutput` identifies an exact tool call using `sessionId` and `callId`, an exclusive `after` sequence, and `limit` of 1–200. Disabled display returns `disabled`; historical runs without capture return `unavailable`. `getOutputResource` uses the same identity plus `sequence` and a byte `offset`, returning at most 65536 bytes as base64 with the full resource SHA-256. Concatenate bytes before UTF-8 decoding. A preview is incomplete. Neither operation invokes the model or accepts arbitrary file paths.
 
 POST bodies use `application/json` and a `client-request` envelope containing `type`, `rpcId`, `method`, and the operation's `payload`. `rpcId` is a lowercase UUID v4; `method` must match the endpoint. Sending the payload alone is invalid
 
@@ -36,6 +40,6 @@ Read `getEditorRegistry` first, then preserve its complete `document` and curren
 
 Registry writes do not save ordinary profile settings. A stale revision is returned as a business error rather than HTTP 409
 
-`run-events` uses `text/event-stream`: an initial comment is followed by terminal-event JSON in `data:` frames. It is neither model output nor a history replay, and an idle connection may receive no events. Use an SSE-capable client, such as Apipost's Event Stream request
+`run-events` uses `text/event-stream`: an initial comment is followed by JSON invalidations in `data:` frames. `status=output_changed` signals output or independent-record confirmation changes; other values are terminal statuses. Read full output by cursor and calibrate after reconnection. Keepalive comments are sent every 15 seconds. It is neither model output nor a history replay, and an idle connection may receive no events. Use an SSE-capable client, such as Apipost's Event Stream request
 
 Examples are synthetic. Actual catalogs, schemas, and host authentication remain authoritative

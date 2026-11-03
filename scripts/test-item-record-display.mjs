@@ -1,0 +1,65 @@
+import assert from 'node:assert/strict';
+let definition;globalThis.window={__ModuleLoader__:{load:value=>{definition=value;}}};await import('../lib/client.js');
+const jsx=(type,props,key)=>({type,props,key});
+let hook=0,policy={runId:'run-a',enabled:true},hookState=null;
+const react={useState:init=>{const index=hook++;
+  if(!hookState)return [index===0?policy:typeof init==='function'?init():init,()=>{}];
+  if(!(index in hookState))hookState[index]=typeof init==='function'?init():init;
+  const state=hookState;return [state[index],value=>{state[index]=typeof value==='function'?value(state[index]):value;}];
+},useEffect:()=>{}};
+const mod=definition.factory(name=>name==='react'?react:name==='react/jsx-runtime'?{jsx,jsxs:jsx}:{});
+const defs=[],slots=[];
+const ctx={effect:fn=>fn(),slots:{inject:(_name,fn)=>fn(),register:(spec,render)=>slots.push({spec,render})}};
+mod.registerCodexChat(ctx,{conversation:{events:{register:d=>{defs.push(d);return ()=>{};}}},readers:sessionId=>({sessionId})});
+const d=defs.find(v=>v.kind==='codex-runner-item'),type='plugin:codex-runner/item';
+assert.deepEqual(Object.keys(d.match),[type]);assert.equal(d.match['tool/call'],undefined);
+const data={version:2,sessionId:'session-a',callId:'call-a',runId:'run-a',outputSeq:7,type:'agentMessage',text:'**中文**',truncated:false};
+assert.equal(mod.validItemRecord(data),true);assert.equal(mod.validItemRecord({...data,outputSeq:-1}),false);
+const location={kind:'session'},event={type,seq:42,data};
+const state=d.start({}, {event,location});
+const node=d.buildViewNode({state,key:'record-42',id:d.match[type](event).id,start:{location}});
+assert.equal(node.anchorSeq,42);assert.equal(node.location,location);assert.equal(node.groupTree,'turn');
+assert.equal(node.data.runId,'run-a');assert.equal(node.data.callId,'call-a');assert.equal(node.data.sessionId,'session-a');
+assert.equal(d.buildViewNode({state:d.start({}, {event:{...event,data:null}})}),null);
+assert.deepEqual(d.start({}, {event,location}),state,'Refresh replays the same independent node');
+assert.notEqual(d.match[type](event).id,d.match[type]({...event,seq:43}).id);
+const store=mod.createRecordDisplayStore();let notifications=0;
+const off=store.subscribe('session-a','call-a',()=>notifications++);
+assert.equal(store.get('session-a','call-a').hasRecords,false);
+store.mark(data);assert.equal(notifications,1);assert.equal(store.get('session-a','call-a').hasRecords,true);
+store.mark(data);assert.equal(notifications,1,'Replay is idempotent');
+assert.equal(store.get('session-b','call-a').hasRecords,false);assert.equal(store.get('session-a','call-b').hasRecords,false);
+store.observe('session-a','call-a',{run_id:'run-a',status:'disabled'});assert.equal(store.get('session-a','call-a').enabled,false);
+assert.equal(store.get('session-a','call-a').hasRecords,true,'Disabling cannot resurrect aggregate content');
+store.observe('session-a','call-a',{run_id:'run-a',status:'ok',item_records:true});assert.equal(store.get('session-a','call-a').enabled,true);
+off();let polls=0;
+const read=async()=>{polls++;return {run_id:'run-a',status:'disabled'};};
+const stop1=store.watch(data,read),stop2=store.watch(data,read);await Promise.resolve();
+assert.equal(polls,1,'Many item nodes share one display-policy poll per run');stop1();stop2();
+const props={node,sessionId:'session-a',readOutput:read,t:k=>k};
+hook=0;const rendered=mod.CodexItemRecord(props);assert.equal(rendered.props.children[0].props.row.text,'**中文**');
+hook=0;policy={runId:'run-a',enabled:false};assert.equal(mod.CodexItemRecord(props),null);
+hook=0;policy={runId:'run-b',enabled:true};assert.equal(mod.CodexItemRecord(props),null);
+hook=0;policy={runId:'run-a',enabled:true};assert.equal(mod.CodexItemRecord({...props,sessionId:'session-b'}),null);
+for(const kind of ['commandExecution','fileChange'])assert.equal(mod.recordRow({...data,type:kind}).complete,true);
+hook=0;policy={runId:'run-a',hasRecords:true,enabled:true};
+const aggregate={sessionId:'session-a',callId:'call-a',chat:true,t:k=>k};
+assert.equal(mod.CodexOutputCard({...aggregate,deduplicate:true}),null,'Recorded run hides aggregation');
+hook=0;assert.ok(mod.CodexOutputCard({...aggregate,deduplicate:false}),'No conversation registry retains the old card');
+// Load exact inline and sidecar records on demand, including UTF-8 split across chunks.
+for(const sidecar of [false,true]) {
+  const fullText='完整版中文🧪',bytes=Buffer.from(JSON.stringify({item:{id:'a',type:'agentMessage',text:fullText}}));
+  let resourceReads=0;
+  hookState=[{runId:'run-a',enabled:true}];
+  const fullProps={...props,node:{...node,data:{...data,truncated:true}},readOutput:async args=>{
+    assert.equal(args.runId,'run-a');assert.equal(args.after,6);assert.equal(args.limit,1);
+    return {run_id:'run-a',status:'ok',events:[{runId:'run-a',sequence:7,itemId:'a',method:'item/completed',
+      ...(sidecar?{payload:{bytes:bytes.length}}:{params:{item:{id:'a',type:'agentMessage',text:fullText}}})}]};
+  },readResource:async args=>{resourceReads++;assert.equal(args.runId,'run-a');assert.equal(args.sequence,7);
+    const end=Math.min(args.offset+2,bytes.length);return {data:bytes.subarray(args.offset,end).toString('base64'),next_offset:end,has_more:end<bytes.length};}};
+  hook=0;await mod.CodexItemRecord(fullProps).props.children[1].props.onClick();
+  hook=0;assert.equal(mod.CodexItemRecord(fullProps).props.children[0].props.row.text,fullText);
+  assert.equal(resourceReads>0,sidecar);
+}
+hookState=null;
+console.log('ITEM-RECORD-DISPLAY-OK exact seq, replay, independent runs, aggregate subscription, settings, shared polling and node selection');
