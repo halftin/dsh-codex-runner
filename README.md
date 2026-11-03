@@ -7,6 +7,7 @@
 启动任务 · 后台执行 · 查询进度 · 追加指令 · 读取完整答复
 
 [下载与安装](#下载与安装) · [开始使用](#开始使用) · [修改设置](#修改设置) · [使用文档](docs/README.md) · [English](README.en.md)
+
 [![Download 0.5.3-beta](https://img.shields.io/badge/download-0.5.3--beta-blue)](https://github.com/halftin/dsh-codex-runner/releases/download/v0.5.3-beta/dsh-codex-runner-0.5.3-beta.tgz)
 [![DSH Market](https://img.shields.io/badge/DSH_Market-browse-blue)](https://dshmarket.com/)
 [![Platform: Windows](https://img.shields.io/badge/platform-Windows-blue?style=flat)](#下载与安装)
