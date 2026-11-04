@@ -9,7 +9,7 @@
 [下载与安装](#下载与安装) · [开始使用](#开始使用) · [修改设置](#修改设置) · [使用文档](docs/README.md) · [English](README.en.md)
 
 [![Download 0.5.3-beta](https://img.shields.io/badge/download-0.5.3--beta-blue)](https://github.com/halftin/dsh-codex-runner/releases/download/v0.5.3-beta/dsh-codex-runner-0.5.3-beta.tgz)
-[![DSH Market](https://img.shields.io/badge/DSH_Market-browse-blue)](https://dshmarket.com/)
+[![DSH Market](https://img.shields.io/badge/DSH_Market-listed-brightgreen)](https://awesome-dsh-plugin.com/p/halftin/dsh-codex-runner/)
 [![Platform: Windows](https://img.shields.io/badge/platform-Windows-blue?style=flat)](#下载与安装)
 [![Node.js: >=22.23.4](https://img.shields.io/badge/Node.js-%3E%3D22.23.4-green?style=flat)](package.json)
 [![DSH compatibility](https://img.shields.io/badge/DSH-%3E%3D0.2.1--rc.3%20%3C0.3.0-lightgrey?style=flat)](package.json)
@@ -42,7 +42,7 @@
 
 当前版本为 **`0.5.3-beta` 预发行版**。以下命令固定安装此版本；npm 的 `next` 标签随新的预发行版更新。
 
-DSH Market 徽章链接市场首页，目录收录申请待完成；目前请通过 npm 或发行包安装此版本。
+已收录至 DSH Market 使用的社区目录。可打开[插件详情页](https://awesome-dsh-plugin.com/p/halftin/dsh-codex-runner/)，或在 DSH Market 搜索 `dsh-codex-runner`；当前目录条目提供 `0.5.3-beta` 发行包。
 
 | 获取方式 | 入口 | 说明 |
 | --- | --- | --- |

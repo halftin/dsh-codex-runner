@@ -9,7 +9,7 @@ Start tasks · Run in the background · Check progress · Send instructions · R
 [![Version](https://img.shields.io/badge/version-0.5.3--beta-blue?style=flat)](package.json)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat)](LICENSE)
 [![Download 0.5.3-beta](https://img.shields.io/badge/download-0.5.3--beta-blue)](https://github.com/halftin/dsh-codex-runner/releases/download/v0.5.3-beta/dsh-codex-runner-0.5.3-beta.tgz)
-[![DSH Market](https://img.shields.io/badge/DSH_Market-browse-blue)](https://dshmarket.com/)
+[![DSH Market](https://img.shields.io/badge/DSH_Market-listed-brightgreen)](https://awesome-dsh-plugin.com/p/halftin/dsh-codex-runner/)
 [![Platform: Windows](https://img.shields.io/badge/platform-Windows-blue?style=flat)](#download-and-install)
 [![Node.js: >=22.23.4](https://img.shields.io/badge/Node.js-%3E%3D22.23.4-green?style=flat)](package.json)
 [![DSH compatibility](https://img.shields.io/badge/DSH-%3E%3D0.2.1--rc.3%20%3C0.3.0-lightgrey?style=flat)](package.json)
@@ -38,7 +38,7 @@ Requires **Windows, DSH, and an installed, authenticated Codex CLI**. Node `22.2
 
 Version **`0.5.3-beta`** is a prerelease. The commands below pin this version; npm `next` tracks newer prereleases.
 
-The DSH Market badge links to the market homepage. Catalog submission is pending; use npm or the release archive to install this version.
+Listed in the community catalog used by DSH Market. Open the [plugin details](https://awesome-dsh-plugin.com/p/halftin/dsh-codex-runner/) or search for `dsh-codex-runner` in DSH Market. The catalog entry provides the `0.5.3-beta` release archive.
 
 | Distribution | Location | Availability |
 | --- | --- | --- |
